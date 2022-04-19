@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<info>
+    <!--mt2服务器区信息-->
+    <gameinfo zoneid="1" groupid="18" bid="18" key="88888888" gamename="萌途2020" groupname="新萌途" type="0" istest="1"/>
+    <!--是否开启真验证-->
+    <fakelogin />
+    
+    <!--mt2服务器信息-->
+    <ipinfo>
+        <!--世界服务器网络设置-->
+        <svr type="WS" index="1" users="4000" thread="0">
+            <listen   type="DB" ip="127.0.0.1" port="31111" recvbuf="4194304" sendbuf="4194304" />
+            <listen   type="CT" ip="127.0.0.1" port="32222" recvbuf="1024000" sendbuf="1024000" />
+            <listen   type="GS" ip="127.0.0.1" port="33333" recvbuf="4194304" sendbuf="4194304" />
+            <listen   type="GT" ip="127.0.0.1" port="34444" recvbuf="1024000" sendbuf="1024000" />
+        </svr>
+        <!--聊天服务器网络设置-->
+        <svr type="CT" index="1" users="4000" thread="0">
+          <listen type="GS" ip="127.0.0.1" port="36666" recvbuf="1024000" sendbuf="1024000" />
+          <listen type="GT" ip="127.0.0.1" port="35555" recvbuf="1024000" sendbuf="1024000" />
+        </svr>
+        <!--游戏服务器网络设置-->
+        <svr type="GS" index="1" users="4000" thread="0">          
+          <listen type="GT" ip="127.0.0.1" port="37777" recvbuf="4194304" sendbuf="4194304" />
+        </svr>
+
+        <!--svr type="GS" index="2" users="4000" thread="0">
+          <listen type="CT" ip="127.0.0.1" port="6667" recvbuf="1024000" sendbuf="1024000" />
+          <listen type="GT" ip="127.0.0.1" port="7778" recvbuf="4194304" sendbuf="4194304" />
+        </svr-->
+
+        <!--网关服务器网络设置-->
+        <svr type="GT" index="1" users="4000" thread="0">
+          <listen type="CLIENT" ip="0.0.0.0" port="8888" recvbuf="8191" sendbuf="65535" />
+        </svr>
+        <svr type="GT" index="2" users="4000" thread="0">
+          <listen type="CLIENT" ip="0.0.0.0" port="8889" recvbuf="8191" sendbuf="65535" />
+        </svr>
+        <!--日志服务器网络设置-->
+        <!-- beginRow LS -->
+        <svr type="LS" index="1" users="4000" thread="0">
+          <listen type="ALL" ip="127.0.0.1" port="10591" recvbuf="1024000" sendbuf="8192" />
+        </svr>
+        <!-- endRow LS -->
+        <!--充值网关服务器网络设置-->
+        <!-- beginRow RG -->
+        <svr type="RG" index="1" users="4000" thread="0">
+            <listen type="DB" ip="127.0.0.1" port="10592" recvbuf="65535" sendbuf="65535" />
+            <listen type="RC" ip="127.0.0.1" port="10593" recvbuf="65535" sendbuf="65535" />
+        </svr>
+        <!-- endRow RG -->
+    </ipinfo>
+    
+    <!--服务器数据库设置-->
+    <dbinfo>
+        <!--数据库服务器数据库设置(也就是游戏数据库设置)-->
+        <mysql type="DB" host="127.0.0.1" port="3306" user="root" password="root" db="dbmhxyzj1365806" charset="utf8" />
+        <!--<mysql type="DB" host="192.168.10.89" port="3306" user="root" password="root" db="jinken1" charset="utf8" />-->
+        <!--日志服务器数据库设置-->
+        <mysql type="LS" host="127.0.0.1" port="3306" user="root" password="root" db="dbmhxyzj1239264_log" charset="utf8" />
+    </dbinfo>
+    
+    <!--运行时日志设置-->
+    <runlog dir="./" flush="60" cri="open" wrn="open" inf="open" dbg="open" />
+    <!--守护进程配置-->
+    <ctrl host="127.0.0.1" port="10594" recvbuf="65535" sendbuf="65535" />
+</info>
