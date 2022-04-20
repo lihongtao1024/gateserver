@@ -8,7 +8,8 @@ import (
 )
 
 type Component interface {
-	Listen(ip string, port uint16) *net.TCPListener
+	Listen(ip string, port uint16) Listener
+	Connect(ip string, port uint16) Connection
 	Do() bool
 	Close()
 }
@@ -83,7 +84,7 @@ func NewComponent(dispatch Dispatch, fragment Fragment) Component {
 	return comp
 }
 
-func (comp *tcpComponent) open(listener *net.TCPListener) {
+func (comp *tcpComponent) onAccpeted(listener *net.TCPListener) {
 	comp.waitGroup.Add(1)
 
 	defer func() {
@@ -109,7 +110,7 @@ func (comp *tcpComponent) open(listener *net.TCPListener) {
 			continue
 		}
 
-		NewConnection(comp, conn).(*tcpConnection).Do(listener)
+		NewConnection(comp, conn).(*tcpConnection).onAccpeted(listener)
 	}
 }
 
@@ -148,7 +149,7 @@ func (comp *tcpComponent) postClosed(conn *tcpConnection) {
 	comp.eventChan <- evt
 }
 
-func (comp *tcpComponent) Listen(ip string, port uint16) *net.TCPListener {
+func (comp *tcpComponent) Listen(ip string, port uint16) Listener {
 	addr, err := net.ResolveTCPAddr("tcp4", ip+":"+strconv.Itoa(int(port)))
 	if err != nil {
 		return nil
@@ -159,8 +160,32 @@ func (comp *tcpComponent) Listen(ip string, port uint16) *net.TCPListener {
 		return nil
 	}
 
-	go comp.open(listener)
+	go comp.onAccpeted(listener)
 	return listener
+}
+
+func (comp *tcpComponent) Connect(ip string, port uint16) Connection {
+	comp.waitGroup.Add(1)
+	connection := NewConnection(comp, nil)
+
+	go func() {
+		addr, err := net.ResolveTCPAddr("tcp4", ip+":"+strconv.Itoa(int(port)))
+		if err != nil {
+			comp.postFatal(connection.(*tcpConnection), err)
+			return
+		}
+
+		conn, err := net.DialTCP("tcp", nil, addr)
+		if err != nil {
+			comp.postFatal(connection.(*tcpConnection), err)
+			return
+		}
+
+		connection.(*tcpConnection).onConnected(conn)
+		comp.waitGroup.Done()
+	}()
+
+	return connection
 }
 
 func (comp *tcpComponent) Do() bool {

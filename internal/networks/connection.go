@@ -15,6 +15,7 @@ type Connection interface {
 	GetLocalAddr() string
 	GetRemoteAddr() string
 	Send(data []byte, len int) bool
+	IsDialFatal() bool
 	IsDisconnected() bool
 	Disconnect()
 }
@@ -68,20 +69,27 @@ type tcpConnection struct {
 	customData interface{}
 }
 
-func NewConnection(comp *tcpComponent, c *net.TCPConn) Connection {
-	conn := &tcpConnection{
+func NewConnection(comp *tcpComponent, conn *net.TCPConn) Connection {
+	connection := &tcpConnection{
 		netStatus: connConnected,
 		netComp:   comp,
-		netConn:   c,
+		netConn:   conn,
 		fatalOnce: &sync.Once{},
 		closeOnce: &sync.Once{},
 		eventChan: make(chan connEvent, 4096),
 	}
-	return conn
+	return connection
 }
 
-func (conn *tcpConnection) Do(listener *net.TCPListener) {
+func (conn *tcpConnection) onAccpeted(listener *net.TCPListener) {
 	conn.netComp.postConnected(listener, conn)
+	conn.asyncDo(conn.readBytes)
+	conn.asyncDo(conn.writeBytes)
+}
+
+func (conn *tcpConnection) onConnected(connection *net.TCPConn) {
+	conn.netConn = connection
+	conn.netComp.postConnected(nil, conn)
 	conn.asyncDo(conn.readBytes)
 	conn.asyncDo(conn.writeBytes)
 }
@@ -240,6 +248,10 @@ func (conn *tcpConnection) Send(data []byte, len int) bool {
 
 	conn.postSend(data, len)
 	return true
+}
+
+func (conn *tcpConnection) IsDialFatal() bool {
+	return conn.netConn == nil
 }
 
 func (conn *tcpConnection) IsDisconnected() bool {

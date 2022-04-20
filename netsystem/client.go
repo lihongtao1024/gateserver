@@ -1,8 +1,8 @@
 package netsystem
 
 import (
-	"fmt"
 	"gateserver/internal/networks"
+	"gateserver/logsystem"
 )
 
 type Client struct {
@@ -23,15 +23,36 @@ func (client *Client) GetLogicName() string {
 }
 
 func (client *Client) OnConnected() {
-	fmt.Println("client OnConnected")
+	logsystem.This.Inf(
+		"on connected [%s]: local addr:%s, remote addr:%s.",
+		client.GetLogicName(),
+		client.cliConn.GetLocalAddr(),
+		client.cliConn.GetRemoteAddr(),
+	)
+}
+
+func (client *Client) OnFatal(err error) {
+	logsystem.This.Err(
+		"on fatal [%s]: local addr:%s, remote addr:%s, errmsg:'%s'.",
+		client.GetLogicName(),
+		client.cliConn.GetLocalAddr(),
+		client.cliConn.GetRemoteAddr(),
+		err.Error(),
+	)
 }
 
 func (client *Client) OnClosed() {
-	fmt.Println("client OnClosed")
+	logsystem.This.Inf(
+		"on closed [%s]: local addr:%s, remote addr:%s.",
+		client.GetLogicName(),
+		client.cliConn.GetLocalAddr(),
+		client.cliConn.GetRemoteAddr(),
+	)
+	client.cliConn = nil
 }
 
 func (client *Client) OnReceived(data []byte) {
-	fmt.Println("client OnReceived")
+
 }
 
 func (client *Client) Disconnect() {
