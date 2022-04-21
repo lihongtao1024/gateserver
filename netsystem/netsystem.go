@@ -161,14 +161,6 @@ func (ss *NetSystem) OnFatal(err error, conn networks.Connection) {
 		return
 	}
 
-	if conn.IsDialFatal() {
-		logsystem.This.Err(
-			"on fatal [%s]: errmsg:'%s'.",
-			server.GetLogicName(),
-			err.Error(),
-		)
-		return
-	}
 	server.OnFatal(err)
 }
 

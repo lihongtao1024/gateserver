@@ -39,6 +39,16 @@ func (svr *GameServer) OnConnected() {
 }
 
 func (svr *GameServer) OnFatal(err error) {
+	if svr.svrConn.IsDialFatal() {
+		logsystem.This.Err(
+			"on fatal [%s]: errmsg:'%s'.",
+			svr.GetLogicName(),
+			err.Error(),
+		)
+		svr.svrConn = nil
+		return
+	}
+
 	logsystem.This.Err(
 		"on fatal [%s]: local addr:%s, remote addr:%s, errmsg:'%s'.",
 		svr.GetLogicName(),
