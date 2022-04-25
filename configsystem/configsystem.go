@@ -11,15 +11,15 @@ const (
 	configPath = "./svrinfo.xml"
 )
 
-var This *configs.Config
+var TheConfig *configs.Config
 var thisOnce sync.Once
 
 func NewConfigSystemInstance() *configs.Config {
 	thisOnce.Do(func() {
-		This = configs.LoadConfig(configPath)
-		if This == nil {
+		TheConfig = configs.LoadConfig(configPath)
+		if TheConfig == nil {
 			fmt.Fprintf(os.Stdout, "load config '%s' [fail].\n", configPath)
 		}
 	})
-	return This
+	return TheConfig
 }

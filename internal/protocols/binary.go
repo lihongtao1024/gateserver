@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 )
 
-type ProtoWriter interface {
+type Writer interface {
 	Write(*bytes.Buffer) bool
 }
 
-type ProtoReader interface {
+type Reader interface {
 	Read(*bytes.Buffer) bool
 }
 
@@ -141,11 +141,11 @@ func ProtoReadString(buff *bytes.Buffer, s *string, limit uint16) bool {
 	return true
 }
 
-func ProtoWriteCustom(buff *bytes.Buffer, t ProtoWriter) bool {
+func ProtoWriteCustom(buff *bytes.Buffer, t Writer) bool {
 	return t.Write(buff)
 }
 
-func ProtoReadCustom(buff *bytes.Buffer, t ProtoReader) bool {
+func ProtoReadCustom(buff *bytes.Buffer, t Reader) bool {
 	return t.Read(buff)
 }
 
@@ -162,7 +162,7 @@ func ProtoWriteCustomArray[T any, I BuiltinIdx](buff *bytes.Buffer, tt []T, limi
 	var t interface{}
 	for i := 0; i < l; i++ {
 		t = &tt[i]
-		writer, ok := t.(ProtoWriter)
+		writer, ok := t.(Writer)
 		if !ok {
 			return false
 		}
@@ -189,7 +189,7 @@ func ProtoReadCustomArray[T any, I BuiltinIdx](buff *bytes.Buffer, tt *[]T, limi
 	*tt = make([]T, l)
 	for i := I(0); i < l; i++ {
 		t = &(*tt)[i]
-		reader, ok := t.(ProtoReader)
+		reader, ok := t.(Reader)
 		if !ok {
 			return false
 		}

@@ -33,12 +33,12 @@ type Application struct {
 	waitGroup *sync.WaitGroup
 }
 
-var This *Application
+var TheApp *Application
 var thisOnce sync.Once
 
 func NewApplicationInstance() *Application {
 	thisOnce.Do(func() {
-		This = &Application{
+		TheApp = &Application{
 			appStatus: appIdle,
 			waitGroup: &sync.WaitGroup{},
 			startOnce: &sync.Once{},
@@ -46,7 +46,7 @@ func NewApplicationInstance() *Application {
 		}
 	})
 
-	return This
+	return TheApp
 }
 
 func (app *Application) GetType() int {
@@ -97,7 +97,7 @@ func (app *Application) doApp() {
 			if app.isStatus(appClosing) {
 				app.setStatus(appClosed)
 			}
-			busy = netsystem.This.Do() || busy
+			busy = netsystem.TheNet.Do() || busy
 			if !busy {
 				time.Sleep(appHeartBeatTimeout)
 			}
@@ -119,32 +119,32 @@ func (app *Application) appInit() bool {
 	if logsystem.NewLogSystemInstance(app.GetLogicName()) == nil {
 		return false
 	}
-	logsystem.This.Sys("init log system [ok].")
+	logsystem.TheLog.Sys("init log system [ok].")
 
 	if netsystem.NewNetSystemInstance(app.appIndex) == nil {
 		return false
 	}
-	logsystem.This.Sys("init net system [ok].")
+	logsystem.TheLog.Sys("init net system [ok].")
 
-	logsystem.This.Sys("init %s [ok].", app.GetLogicName())
+	logsystem.TheLog.Sys("init %s [ok].", app.GetLogicName())
 	return true
 }
 
 func (app *Application) appUninit() {
-	if logsystem.This != nil {
-		logsystem.This.Sys("uninit %s [wait].", app.GetLogicName())
+	if logsystem.TheLog != nil {
+		logsystem.TheLog.Sys("uninit %s [wait].", app.GetLogicName())
 	} else {
 		fmt.Fprintf(os.Stdout, "uninit %s [wait].\n", app.GetLogicName())
 	}
 
-	if netsystem.This != nil {
-		logsystem.This.Sys("uninit net system system [ok].")
-		netsystem.This.Close()
+	if netsystem.TheNet != nil {
+		logsystem.TheLog.Sys("uninit net system system [ok].")
+		netsystem.TheNet.Close()
 	}
 
-	if logsystem.This != nil {
-		logsystem.This.Sys("uninit log system [ok].")
-		logsystem.This.Close()
+	if logsystem.TheLog != nil {
+		logsystem.TheLog.Sys("uninit log system [ok].")
+		logsystem.TheLog.Close()
 	}
 
 	fmt.Fprintf(os.Stdout, "uninit %s [ok].\n", app.GetLogicName())

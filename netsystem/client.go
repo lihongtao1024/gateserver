@@ -1,16 +1,20 @@
 package netsystem
 
 import (
+	"gateserver/internal/machines"
 	"gateserver/internal/networks"
+	"gateserver/internal/protocols"
 	"gateserver/logsystem"
 )
 
 type Client struct {
-	cliConn networks.Connection
+	cliConn  networks.Connection
+	cliState machines.Machine
 }
 
 func NewClient(conn networks.Connection) Session {
-	client := &Client{conn}
+	client := &Client{cliConn: conn}
+	client.cliState = machines.NewMachine(client)
 	return client
 }
 
@@ -23,7 +27,7 @@ func (client *Client) GetLogicName() string {
 }
 
 func (client *Client) OnConnected() {
-	logsystem.This.Inf(
+	logsystem.TheLog.Inf(
 		"on connected [%s]: local addr:%s, remote addr:%s.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),
@@ -32,7 +36,7 @@ func (client *Client) OnConnected() {
 }
 
 func (client *Client) OnFatal(err error) {
-	logsystem.This.Err(
+	logsystem.TheLog.Err(
 		"on fatal [%s]: local addr:%s, remote addr:%s, errmsg:'%s'.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),
@@ -42,7 +46,7 @@ func (client *Client) OnFatal(err error) {
 }
 
 func (client *Client) OnClosed() {
-	logsystem.This.Inf(
+	logsystem.TheLog.Inf(
 		"on closed [%s]: local addr:%s, remote addr:%s.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),
@@ -55,8 +59,25 @@ func (client *Client) OnReceived(data []byte) {
 
 }
 
+func (client *Client) IsState(s int) bool {
+	return client.cliState.IsState(s)
+}
+
+func (client *Client) SwitchState(state SessionState) {
+	client.cliState.SwitchState(state)
+}
+
+func (client *Client) Send(data []byte) bool {
+	return client.cliConn.Send(data)
+}
+
+func (client *Client) SendProto(proto protocols.Writer) bool {
+	return true
+}
+
 func (client *Client) Disconnect() {
-	if client.cliConn == nil {
+	if !client.cliState.IsState(ServerConnected) &&
+		!client.cliState.IsState(ServerWorking) {
 		return
 	}
 
