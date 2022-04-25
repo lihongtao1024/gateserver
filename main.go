@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"gateserver/applications"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	if len(os.Args) < 3 {
 		return
 	}

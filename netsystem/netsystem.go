@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	netCheckTimeout = time.Second * 5
+	netCheckTimeout  = time.Second * 5
+	netPackageHeader = 4
 )
 
 type NetSystem struct {
@@ -114,7 +115,7 @@ func (ss *NetSystem) checkServer() {
 
 func (ss *NetSystem) OnUnpack(data []byte) int {
 	l := len(data)
-	if l < 4 {
+	if l < netPackageHeader {
 		return networks.FragmentContinue
 	}
 

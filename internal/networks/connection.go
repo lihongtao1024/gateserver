@@ -14,7 +14,7 @@ type Connection interface {
 	GetData() interface{}
 	GetLocalAddr() string
 	GetRemoteAddr() string
-	Send(data []byte, len int) bool
+	Send(data []byte) bool
 	IsDialFatal() bool
 	IsDisconnected() bool
 	Disconnect()
@@ -181,9 +181,9 @@ func (conn *tcpConnection) writeBytes() {
 	}
 }
 
-func (conn *tcpConnection) postSend(data []byte, len int) {
-	slice := make([]byte, len)
-	copy(slice, data[:len])
+func (conn *tcpConnection) postSend(data []byte) {
+	slice := make([]byte, len(data))
+	copy(slice, data)
 
 	evt := &connSendEvent{
 		data: slice,
@@ -241,12 +241,12 @@ func (conn *tcpConnection) GetRemoteAddr() string {
 	return conn.netConn.RemoteAddr().String()
 }
 
-func (conn *tcpConnection) Send(data []byte, len int) bool {
+func (conn *tcpConnection) Send(data []byte) bool {
 	if conn.IsDisconnected() {
 		return false
 	}
 
-	conn.postSend(data, len)
+	conn.postSend(data)
 	return true
 }
 
