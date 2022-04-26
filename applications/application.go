@@ -6,6 +6,7 @@ import (
 	"gateserver/internal/configs"
 	"gateserver/logsystem"
 	"gateserver/netsystem"
+	"gateserver/protosystem"
 	"os"
 	"strconv"
 	"sync"
@@ -126,6 +127,11 @@ func (app *Application) appInit() bool {
 	}
 	logsystem.TheLog.Sys("init net system [ok].")
 
+	if protosystem.NewProtoSystemInstance(app.appIndex) == nil {
+		return false
+	}
+	logsystem.TheLog.Sys("init proto system [ok].")
+
 	logsystem.TheLog.Sys("init %s [ok].", app.GetLogicName())
 	return true
 }
@@ -138,8 +144,13 @@ func (app *Application) appUninit() {
 	}
 
 	if netsystem.TheNet != nil {
-		logsystem.TheLog.Sys("uninit net system system [ok].")
+		logsystem.TheLog.Sys("uninit net system [ok].")
 		netsystem.TheNet.Close()
+	}
+
+	if protosystem.TheProto != nil {
+		logsystem.TheLog.Sys("uninit proto system [ok].")
+		protosystem.TheProto.Close()
 	}
 
 	if logsystem.TheLog != nil {

@@ -203,7 +203,7 @@ func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
 		conn.Disconnect()
 		return
 	}
-	server.OnReceived(data)
+	server.OnReceived(data[unsafe.Sizeof(uint32(0)):])
 }
 
 func (ss *NetSystem) Do() bool {

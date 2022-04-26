@@ -27,6 +27,10 @@ func NewServer(i, t int, attr *configs.ListenAttr) *Server {
 	return svr
 }
 
+func (svr *Server) GetType() int {
+	return svr.svrType
+}
+
 func (svr *Server) GetIndex() int {
 	return svr.svrIndex
 }
@@ -81,7 +85,8 @@ func (svr *Server) OnClosed() {
 }
 
 func (svr *Server) OnReceived(data []byte) {
-
+	state := svr.svrState.GetState()
+	state.(SessionState).OnReceived(svr, data)
 }
 
 func (svr *Server) Connect() bool {
@@ -115,22 +120,6 @@ func (svr *Server) IsState(s int) bool {
 
 func (svr *Server) SwitchState(state SessionState) {
 	svr.svrState.SwitchState(state)
-}
-
-func (svr *Server) SendHandShake() bool {
-	/*proto := &protocols.ServerHandShakeReq{
-		Type:    uint16(svr.svrType),
-		Index:   uint16(svr.svrIndex),
-		Zone:    uint32(configsystem.TheConfig.GetZoneId()),
-		Version: protocols.NetVersion,
-		Lenght:  0,
-	}
-
-	b := bytes.NewBuffer([]byte{})
-	gb := gob.NewEncoder(b)
-	gb.Encode(proto)
-	return svr.Send(b.Bytes())*/
-	return true
 }
 
 func (svr *Server) Send(data []byte) bool {

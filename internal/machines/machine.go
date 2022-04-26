@@ -9,6 +9,7 @@ type State interface {
 type Machine interface {
 	IsState(s int) bool
 	SwitchState(s State)
+	GetState() State
 }
 
 type machineImpl struct {
@@ -37,4 +38,8 @@ func (m *machineImpl) SwitchState(s State) {
 
 	m.curState = s
 	m.curState.OnEnter(m.hostObject)
+}
+
+func (m *machineImpl) GetState() State {
+	return m.curState
 }
