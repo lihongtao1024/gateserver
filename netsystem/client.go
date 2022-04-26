@@ -26,7 +26,7 @@ func (client *Client) GetLogicName() string {
 }
 
 func (client *Client) OnConnected() {
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"on connected [%s]: local addr:%s, remote addr:%s.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),
@@ -35,7 +35,7 @@ func (client *Client) OnConnected() {
 }
 
 func (client *Client) OnFatal(err error) {
-	logsystem.TheLog.Err(
+	logsystem.Instance.Err(
 		"on fatal [%s]: local addr:%s, remote addr:%s, errmsg:'%s'.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),
@@ -45,7 +45,7 @@ func (client *Client) OnFatal(err error) {
 }
 
 func (client *Client) OnClosed() {
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"on closed [%s]: local addr:%s, remote addr:%s.",
 		client.GetLogicName(),
 		client.cliConn.GetLocalAddr(),

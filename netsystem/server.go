@@ -40,7 +40,7 @@ func (svr *Server) GetLogicName() string {
 }
 
 func (svr *Server) OnConnected() {
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"on connected [%s]: local addr:%s, remote addr:%s.",
 		svr.GetLogicName(),
 		svr.svrConn.GetLocalAddr(),
@@ -52,7 +52,7 @@ func (svr *Server) OnConnected() {
 
 func (svr *Server) OnFatal(err error) {
 	if svr.svrConn.IsDialFatal() {
-		logsystem.TheLog.Err(
+		logsystem.Instance.Err(
 			"on fatal [%s]: errmsg:'%s'.",
 			svr.GetLogicName(),
 			err.Error(),
@@ -63,7 +63,7 @@ func (svr *Server) OnFatal(err error) {
 		return
 	}
 
-	logsystem.TheLog.Err(
+	logsystem.Instance.Err(
 		"on fatal [%s]: local addr:%s, remote addr:%s, errmsg:'%s'.",
 		svr.GetLogicName(),
 		svr.svrConn.GetLocalAddr(),
@@ -73,7 +73,7 @@ func (svr *Server) OnFatal(err error) {
 }
 
 func (svr *Server) OnClosed() {
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"on closed [%s]: local addr:%s, remote addr:%s.",
 		svr.GetLogicName(),
 		svr.svrConn.GetLocalAddr(),
@@ -90,12 +90,12 @@ func (svr *Server) OnReceived(data []byte) {
 }
 
 func (svr *Server) Connect() bool {
-	svr.svrConn = TheNet.netComponent.Connect(
+	svr.svrConn = Instance.netComponent.Connect(
 		svr.svrAttr.Ip,
 		uint16(svr.svrAttr.Port),
 	)
 	if svr.svrConn == nil {
-		logsystem.TheLog.Err(
+		logsystem.Instance.Err(
 			"connect to [%s]: [%s:%d] [fail].",
 			svr.GetLogicName(),
 			svr.svrAttr.Ip,
@@ -105,7 +105,7 @@ func (svr *Server) Connect() bool {
 	}
 
 	svr.svrConn.SetData(svr)
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"connect to [%s]: [%s:%d] [wait].",
 		svr.GetLogicName(),
 		svr.svrAttr.Ip,

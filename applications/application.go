@@ -34,12 +34,12 @@ type Application struct {
 	waitGroup *sync.WaitGroup
 }
 
-var TheApp *Application
+var Instance *Application
 var thisOnce sync.Once
 
 func NewApplicationInstance() *Application {
 	thisOnce.Do(func() {
-		TheApp = &Application{
+		Instance = &Application{
 			appStatus: appIdle,
 			waitGroup: &sync.WaitGroup{},
 			startOnce: &sync.Once{},
@@ -47,7 +47,7 @@ func NewApplicationInstance() *Application {
 		}
 	})
 
-	return TheApp
+	return Instance
 }
 
 func (app *Application) GetType() int {
@@ -98,7 +98,7 @@ func (app *Application) doApp() {
 			if app.isStatus(appClosing) {
 				app.setStatus(appClosed)
 			}
-			busy = netsystem.TheNet.Do() || busy
+			busy = netsystem.Instance.Do() || busy
 			if !busy {
 				time.Sleep(appHeartBeatTimeout)
 			}
@@ -120,42 +120,42 @@ func (app *Application) appInit() bool {
 	if logsystem.NewLogSystemInstance(app.GetLogicName()) == nil {
 		return false
 	}
-	logsystem.TheLog.Sys("init log system [ok].")
+	logsystem.Instance.Sys("init log system [ok].")
 
 	if netsystem.NewNetSystemInstance(app.appIndex) == nil {
 		return false
 	}
-	logsystem.TheLog.Sys("init net system [ok].")
+	logsystem.Instance.Sys("init net system [ok].")
 
 	if protosystem.NewProtoSystemInstance(app.appIndex) == nil {
 		return false
 	}
-	logsystem.TheLog.Sys("init proto system [ok].")
+	logsystem.Instance.Sys("init proto system [ok].")
 
-	logsystem.TheLog.Sys("init %s [ok].", app.GetLogicName())
+	logsystem.Instance.Sys("init %s [ok].", app.GetLogicName())
 	return true
 }
 
 func (app *Application) appUninit() {
-	if logsystem.TheLog != nil {
-		logsystem.TheLog.Sys("uninit %s [wait].", app.GetLogicName())
+	if logsystem.Instance != nil {
+		logsystem.Instance.Sys("uninit %s [wait].", app.GetLogicName())
 	} else {
 		fmt.Fprintf(os.Stdout, "uninit %s [wait].\n", app.GetLogicName())
 	}
 
-	if netsystem.TheNet != nil {
-		logsystem.TheLog.Sys("uninit net system [ok].")
-		netsystem.TheNet.Close()
+	if netsystem.Instance != nil {
+		logsystem.Instance.Sys("uninit net system [ok].")
+		netsystem.Instance.Close()
 	}
 
-	if protosystem.TheProto != nil {
-		logsystem.TheLog.Sys("uninit proto system [ok].")
-		protosystem.TheProto.Close()
+	if protosystem.Instance != nil {
+		logsystem.Instance.Sys("uninit proto system [ok].")
+		protosystem.Instance.Close()
 	}
 
-	if logsystem.TheLog != nil {
-		logsystem.TheLog.Sys("uninit log system [ok].")
-		logsystem.TheLog.Close()
+	if logsystem.Instance != nil {
+		logsystem.Instance.Sys("uninit log system [ok].")
+		logsystem.Instance.Close()
 	}
 
 	fmt.Fprintf(os.Stdout, "uninit %s [ok].\n", app.GetLogicName())

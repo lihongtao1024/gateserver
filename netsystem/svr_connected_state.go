@@ -14,22 +14,22 @@ func (state *ServerConnectedState) GetType() int {
 
 func (state *ServerConnectedState) OnEnter(o interface{}) {
 	server := o.(*Server)
-	logsystem.TheLog.Dbg("[%s] enter ServerConnectedState.", server.GetLogicName())
+	logsystem.Instance.Dbg("[%s] enter ServerConnectedState.", server.GetLogicName())
 
-	data := protosystem.TheProto.BuildServerHandShakeReq()
+	data := protosystem.Instance.BuildServerHandShakeReq()
 	server.Send(data)
 }
 
 func (state *ServerConnectedState) OnLeave(o interface{}) {
 	server := o.(*Server)
-	logsystem.TheLog.Dbg("[%s] leave ServerConnectedState.", server.GetLogicName())
+	logsystem.Instance.Dbg("[%s] leave ServerConnectedState.", server.GetLogicName())
 }
 
 func (state *ServerConnectedState) OnReceived(o interface{}, data []byte) {
 	server := o.(*Server)
-	if err := protosystem.TheProto.VerifyServerHandShakeRsp(
+	if err := protosystem.Instance.VerifyServerHandShakeRsp(
 		uint16(server.GetIndex()), data); err != nil {
-		logsystem.TheLog.Err("[%s] %s.", server.GetLogicName(), err)
+		logsystem.Instance.Err("[%s] %s.", server.GetLogicName(), err)
 		server.Disconnect()
 		return
 	}

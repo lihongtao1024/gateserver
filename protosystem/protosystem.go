@@ -18,18 +18,18 @@ type ProtoSystem struct {
 	recvBuffer [65536]byte
 }
 
-var TheProto *ProtoSystem
+var Instance *ProtoSystem
 var thisOnce sync.Once
 
 func NewProtoSystemInstance(index int) *ProtoSystem {
 	thisOnce.Do(func() {
-		TheProto = &ProtoSystem{
+		Instance = &ProtoSystem{
 			svrIndex:   index,
 			gt2wsProto: NewGT2WSProto(),
 		}
 	})
 
-	return TheProto
+	return Instance
 }
 
 func (proto *ProtoSystem) BuildServerHandShakeReq() []byte {
@@ -37,7 +37,7 @@ func (proto *ProtoSystem) BuildServerHandShakeReq() []byte {
 	hr := *(**protocols.ServerHandShakeReq)(unsafe.Pointer(&bs))
 	hr.Type = configs.ServerIdGt
 	hr.Index = uint16(proto.svrIndex)
-	hr.Zone = uint32(configsystem.TheConfig.GetZoneId())
+	hr.Zone = uint32(configsystem.Instance.GetZoneId())
 	hr.Version = protocols.NetVersion
 	hr.Lenght = 0
 
@@ -57,7 +57,7 @@ func (proto *ProtoSystem) VerifyServerHandShakeRsp(index uint16, data []byte) er
 			hr.Index, index)
 	}
 
-	zid := uint32(configsystem.TheConfig.GetZoneId())
+	zid := uint32(configsystem.Instance.GetZoneId())
 	if hr.Zone != zid {
 		return fmt.Errorf("verify ServerHandShakeRsp fail, illegal zone[%d - %d]",
 			hr.Zone, zid)

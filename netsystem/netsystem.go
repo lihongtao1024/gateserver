@@ -24,33 +24,33 @@ type NetSystem struct {
 	gtClients    map[interface{}]Session
 }
 
-var TheNet *NetSystem
+var Instance *NetSystem
 var thisOnce sync.Once
 
 func NewNetSystemInstance(index int) *NetSystem {
 	thisOnce.Do(func() {
-		TheNet = &NetSystem{}
-		TheNet.svrSessions = make([]*Server, 0)
-		TheNet.svrTimer = time.NewTicker(netCheckTimeout)
-		TheNet.gtClients = make(map[interface{}]Session)
+		Instance = &NetSystem{}
+		Instance.svrSessions = make([]*Server, 0)
+		Instance.svrTimer = time.NewTicker(netCheckTimeout)
+		Instance.gtClients = make(map[interface{}]Session)
 
-		wslistenattr := configsystem.TheConfig.GetServerAttr(
+		wslistenattr := configsystem.Instance.GetServerAttr(
 			configs.ServerIdWs,
 			1,
 			configs.ServerIdGt,
 		)
 		if wslistenattr == nil {
-			TheNet = nil
+			Instance = nil
 			return
 		}
-		TheNet.svrSessions = append(
-			TheNet.svrSessions,
+		Instance.svrSessions = append(
+			Instance.svrSessions,
 			NewServer(1, configs.ServerIdWs, wslistenattr),
 		)
 
 		gslistenattrs := make([]*Server, 0)
 		for i := 1; ; i++ {
-			gslistenattr := configsystem.TheConfig.GetServerAttr(
+			gslistenattr := configsystem.Instance.GetServerAttr(
 				configs.ServerIdGs,
 				i,
 				configs.ServerIdGt,
@@ -64,50 +64,50 @@ func NewNetSystemInstance(index int) *NetSystem {
 			)
 		}
 		if len(gslistenattrs) == 0 {
-			TheNet = nil
+			Instance = nil
 			return
 		}
-		TheNet.svrSessions = append(TheNet.svrSessions, gslistenattrs...)
+		Instance.svrSessions = append(Instance.svrSessions, gslistenattrs...)
 
-		cslistenattr := configsystem.TheConfig.GetServerAttr(
+		cslistenattr := configsystem.Instance.GetServerAttr(
 			configs.ServerIdCt,
 			1,
 			configs.ServerIdGt,
 		)
 		if cslistenattr == nil {
-			TheNet = nil
+			Instance = nil
 			return
 		}
-		TheNet.svrSessions = append(
-			TheNet.svrSessions,
+		Instance.svrSessions = append(
+			Instance.svrSessions,
 			NewServer(1, configs.ServerIdCt, cslistenattr),
 		)
 
-		gtlistenattr := configsystem.TheConfig.GetServerAttr(
+		gtlistenattr := configsystem.Instance.GetServerAttr(
 			configs.ServerIdGt,
 			index,
 			configs.ServerIdCl,
 		)
 		if gtlistenattr == nil {
-			TheNet = nil
+			Instance = nil
 			return
 		}
-		TheNet.netComponent = networks.NewComponent(TheNet, TheNet)
-		if TheNet.netComponent == nil {
-			TheNet = nil
+		Instance.netComponent = networks.NewComponent(Instance, Instance)
+		if Instance.netComponent == nil {
+			Instance = nil
 			return
 		}
 
-		TheNet.gtListener = TheNet.netComponent.Listen(
+		Instance.gtListener = Instance.netComponent.Listen(
 			gtlistenattr.Ip,
 			uint16(gtlistenattr.Port),
 		)
-		if TheNet.gtListener == nil {
-			TheNet = nil
+		if Instance.gtListener == nil {
+			Instance = nil
 			return
 		}
 
-		logsystem.TheLog.Inf(
+		logsystem.Instance.Inf(
 			"listen on [GT%d]: [%s:%d] [ok].",
 			index,
 			gtlistenattr.Ip,
@@ -115,7 +115,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 		)
 	})
 
-	return TheNet
+	return Instance
 }
 
 func (ss *NetSystem) checkServer() {
@@ -148,7 +148,7 @@ func (ss *NetSystem) OnConnected(listener networks.Listener, conn networks.Conne
 	if listener == ss.gtListener {
 		client := NewClient(conn)
 		if _, ok := ss.gtClients[conn]; ok {
-			logsystem.TheLog.Err("on connected, system error:1.")
+			logsystem.Instance.Err("on connected, system error:1.")
 			conn.Disconnect()
 			return
 		}
@@ -159,7 +159,7 @@ func (ss *NetSystem) OnConnected(listener networks.Listener, conn networks.Conne
 	} else {
 		server, ok := conn.GetData().(Session)
 		if !ok {
-			logsystem.TheLog.Err("on connected, system error:2.")
+			logsystem.Instance.Err("on connected, system error:2.")
 			conn.Disconnect()
 			return
 		}
@@ -170,7 +170,7 @@ func (ss *NetSystem) OnConnected(listener networks.Listener, conn networks.Conne
 func (ss *NetSystem) OnFatal(err error, conn networks.Connection) {
 	server, ok := conn.GetData().(Session)
 	if !ok {
-		logsystem.TheLog.Err("on fatal, system error:1.")
+		logsystem.Instance.Err("on fatal, system error:1.")
 		conn.Disconnect()
 		return
 	}
@@ -181,7 +181,7 @@ func (ss *NetSystem) OnFatal(err error, conn networks.Connection) {
 func (ss *NetSystem) OnClosed(conn networks.Connection) {
 	server, ok := conn.GetData().(Session)
 	if !ok {
-		logsystem.TheLog.Err("on closed, system error:1.")
+		logsystem.Instance.Err("on closed, system error:1.")
 		conn.Disconnect()
 		return
 	}
@@ -191,7 +191,7 @@ func (ss *NetSystem) OnClosed(conn networks.Connection) {
 }
 
 func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
-	logsystem.TheLog.Inf(
+	logsystem.Instance.Inf(
 		"on recv, local addr:%s, remote addr:%s.",
 		conn.GetLocalAddr(),
 		conn.GetRemoteAddr(),
@@ -199,7 +199,7 @@ func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
 
 	server, ok := conn.GetData().(Session)
 	if !ok {
-		logsystem.TheLog.Err("on recv, system error:1.")
+		logsystem.Instance.Err("on recv, system error:1.")
 		conn.Disconnect()
 		return
 	}
