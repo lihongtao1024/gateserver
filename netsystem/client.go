@@ -3,7 +3,6 @@ package netsystem
 import (
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
-	"gateserver/internal/protocols"
 	"gateserver/logsystem"
 )
 
@@ -69,10 +68,6 @@ func (client *Client) SwitchState(state SessionState) {
 
 func (client *Client) Send(data []byte) bool {
 	return client.cliConn.Send(data)
-}
-
-func (client *Client) SendProto(proto protocols.Writer) bool {
-	return true
 }
 
 func (client *Client) Disconnect() {

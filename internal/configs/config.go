@@ -451,6 +451,10 @@ func (config *Config) loadDbAttr(root *etree.Element) bool {
 	return true
 }
 
+func (config *Config) GetZoneId() int {
+	return config.zoneAttr.Zid
+}
+
 func (config *Config) GetLogAttr() *LogAttr {
 	return &config.logAttr
 }

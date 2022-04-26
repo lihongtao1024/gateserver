@@ -4,7 +4,6 @@ import (
 	"gateserver/internal/configs"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
-	"gateserver/internal/protocols"
 	"gateserver/logsystem"
 	"strconv"
 )
@@ -86,7 +85,10 @@ func (svr *Server) OnReceived(data []byte) {
 }
 
 func (svr *Server) Connect() bool {
-	svr.svrConn = TheNet.netComponent.Connect(svr.svrAttr.Ip, uint16(svr.svrAttr.Port))
+	svr.svrConn = TheNet.netComponent.Connect(
+		svr.svrAttr.Ip,
+		uint16(svr.svrAttr.Port),
+	)
 	if svr.svrConn == nil {
 		logsystem.TheLog.Err(
 			"connect to [%s]: [%s:%d] [fail].",
@@ -115,12 +117,24 @@ func (svr *Server) SwitchState(state SessionState) {
 	svr.svrState.SwitchState(state)
 }
 
-func (svr *Server) Send(data []byte) bool {
-	return svr.svrConn.Send(data)
+func (svr *Server) SendHandShake() bool {
+	/*proto := &protocols.ServerHandShakeReq{
+		Type:    uint16(svr.svrType),
+		Index:   uint16(svr.svrIndex),
+		Zone:    uint32(configsystem.TheConfig.GetZoneId()),
+		Version: protocols.NetVersion,
+		Lenght:  0,
+	}
+
+	b := bytes.NewBuffer([]byte{})
+	gb := gob.NewEncoder(b)
+	gb.Encode(proto)
+	return svr.Send(b.Bytes())*/
+	return true
 }
 
-func (svr *Server) SendProto(proto protocols.Writer) bool {
-	return true
+func (svr *Server) Send(data []byte) bool {
+	return svr.svrConn.Send(data)
 }
 
 func (svr *Server) Disconnect() {

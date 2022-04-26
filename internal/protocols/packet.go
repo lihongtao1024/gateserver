@@ -1,5 +1,9 @@
 package protocols
 
+const (
+	NetVersion = 1<<12 | 1<<6 | 1
+)
+
 type ClientHandShakeReq struct {
 	Version uint32
 	Zone    uint32
