@@ -70,6 +70,38 @@ func (proto *ProtoSystem) VerifyServerHandShakeRsp(index uint16, data []byte) er
 	return nil
 }
 
+func (proto *ProtoSystem) BuildClientHandShakeRsp() []byte {
+	bs := proto.sendBuffer[unsafe.Sizeof(uint32(0)):]
+	hr := *(**protocols.ClientHandShakeRsp)(unsafe.Pointer(&bs))
+	hr.Return = 0
+	hr.Load = 0
+	hr.Delay = 10
+
+	l := uint32(unsafe.Sizeof(*hr)) + uint32(unsafe.Sizeof(uint32(0)))
+	binary.LittleEndian.PutUint32(proto.sendBuffer[:], l)
+	return proto.sendBuffer[:l]
+}
+
+func (proto *ProtoSystem) VerifyClientHandShakeReq(data []byte) error {
+	hr := *(**protocols.ClientHandShakeReq)(unsafe.Pointer(&data))
+	if len(data) != int(unsafe.Sizeof(*hr)) {
+		return errors.New("verify ClientHandShakeReq fail, illegal packet length")
+	}
+
+	zid := uint32(configsystem.Instance.GetZoneId())
+	if hr.Zone != zid {
+		return fmt.Errorf("verify ClientHandShakeReq fail, illegal zone[%d - %d]",
+			hr.Zone, zid)
+	}
+
+	if hr.Version == 0 {
+		return fmt.Errorf("verify ClientHandShakeReq fail, illegal version[%d - %d]",
+			hr.Version, protocols.NetVersion)
+	}
+
+	return nil
+}
+
 func (proto *ProtoSystem) Close() {
 
 }

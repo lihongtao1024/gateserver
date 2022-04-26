@@ -21,7 +21,7 @@ type NetSystem struct {
 	svrTimer     *time.Ticker
 	netComponent networks.Component
 	gtListener   networks.Listener
-	gtClients    map[interface{}]Session
+	gtClients    map[interface{}]*Client
 }
 
 var Instance *NetSystem
@@ -32,7 +32,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 		Instance = &NetSystem{}
 		Instance.svrSessions = make([]*Server, 0)
 		Instance.svrTimer = time.NewTicker(netCheckTimeout)
-		Instance.gtClients = make(map[interface{}]Session)
+		Instance.gtClients = make(map[interface{}]*Client)
 
 		wslistenattr := configsystem.Instance.GetServerAttr(
 			configs.ServerIdWs,
@@ -106,6 +106,8 @@ func NewNetSystemInstance(index int) *NetSystem {
 			Instance = nil
 			return
 		}
+
+		Instance.checkServer()
 
 		logsystem.Instance.Inf(
 			"listen on [GT%d]: [%s:%d] [ok].",
@@ -191,12 +193,6 @@ func (ss *NetSystem) OnClosed(conn networks.Connection) {
 }
 
 func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
-	logsystem.Instance.Inf(
-		"on recv, local addr:%s, remote addr:%s.",
-		conn.GetLocalAddr(),
-		conn.GetRemoteAddr(),
-	)
-
 	server, ok := conn.GetData().(Session)
 	if !ok {
 		logsystem.Instance.Err("on recv, system error:1.")

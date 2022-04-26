@@ -12,11 +12,13 @@ func (state *ServerWorkingState) GetType() int {
 }
 
 func (state *ServerWorkingState) OnEnter(o interface{}) {
-	logsystem.Instance.Dbg("[%s] enter ServerWorkingState.", o.(Session).GetLogicName())
+	server := o.(*Server)
+	logsystem.Instance.Dbg("[%s] enter ServerWorkingState.", server.GetLogicName())
 }
 
 func (state *ServerWorkingState) OnLeave(o interface{}) {
-	logsystem.Instance.Dbg("[%s] leave ServerWorkingState.", o.(Session).GetLogicName())
+	server := o.(*Server)
+	logsystem.Instance.Dbg("[%s] leave ServerWorkingState.", server.GetLogicName())
 }
 
 func (state *ServerWorkingState) OnReceived(o interface{}, data []byte) {

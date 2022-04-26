@@ -12,14 +12,16 @@ func (state *ServerConnectingState) GetType() int {
 }
 
 func (state *ServerConnectingState) OnEnter(o interface{}) {
-	logsystem.Instance.Dbg("[%s] enter ServerConnectingState.", o.(Session).GetLogicName())
-	if !o.(*Server).Connect() {
+	server := o.(*Server)
+	logsystem.Instance.Dbg("[%s] enter ServerConnectingState.", server.GetLogicName())
+	if !server.Connect() {
 		logsystem.Instance.Err("connect to [%s] [fail].")
 	}
 }
 
 func (state *ServerConnectingState) OnLeave(o interface{}) {
-	logsystem.Instance.Dbg("[%s] leave ServerConnectingState.", o.(Session).GetLogicName())
+	server := o.(*Server)
+	logsystem.Instance.Dbg("[%s] leave ServerConnectingState.", server.GetLogicName())
 }
 
 func (state *ServerConnectingState) OnReceived(o interface{}, data []byte) {

@@ -196,13 +196,24 @@ func (comp *tcpComponent) Do() bool {
 		{
 			switch event.getType() {
 			case comConnected:
-				comp.comDispatch.OnConnected(event.(*comConnectedEvent).listener, event.(*comConnectedEvent).conn)
+				comp.comDispatch.OnConnected(
+					event.(*comConnectedEvent).listener,
+					event.(*comConnectedEvent).conn,
+				)
 			case comFatal:
-				comp.comDispatch.OnFatal(event.(*comFatalEvent).err, event.(*comFatalEvent).conn)
+				comp.comDispatch.OnFatal(
+					event.(*comFatalEvent).err,
+					event.(*comFatalEvent).conn,
+				)
 			case comClosed:
-				comp.comDispatch.OnClosed(event.(*comClosedEvent).conn)
+				comp.comDispatch.OnClosed(
+					event.(*comClosedEvent).conn,
+				)
 			default:
-				comp.comDispatch.OnReceived(event.(*comMessageEvent).data, event.(*comMessageEvent).conn)
+				comp.comDispatch.OnReceived(
+					event.(*comMessageEvent).data,
+					event.(*comMessageEvent).conn,
+				)
 			}
 			busy = true
 		}

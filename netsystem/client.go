@@ -1,28 +1,31 @@
 package netsystem
 
 import (
+	"fmt"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
 	"gateserver/logsystem"
 )
 
 type Client struct {
+	cliUid   uint32
 	cliConn  networks.Connection
 	cliState machines.Machine
 }
 
-func NewClient(conn networks.Connection) Session {
+func NewClient(conn networks.Connection) *Client {
 	client := &Client{cliConn: conn}
 	client.cliState = machines.NewMachine(client)
+	client.cliState.SwitchState(&ClientIdleState{})
 	return client
 }
 
-func (client *Client) GetIndex() int {
+func (client *Client) GetUid() uint32 {
 	return 0
 }
 
 func (client *Client) GetLogicName() string {
-	return ""
+	return fmt.Sprintf("%p Uid:%d", client, client.cliUid)
 }
 
 func (client *Client) OnConnected() {
@@ -32,6 +35,8 @@ func (client *Client) OnConnected() {
 		client.cliConn.GetLocalAddr(),
 		client.cliConn.GetRemoteAddr(),
 	)
+
+	client.cliState.SwitchState(&ClientConnectedState{})
 }
 
 func (client *Client) OnFatal(err error) {
@@ -51,11 +56,14 @@ func (client *Client) OnClosed() {
 		client.cliConn.GetLocalAddr(),
 		client.cliConn.GetRemoteAddr(),
 	)
+
 	client.cliConn = nil
+	client.cliState.SwitchState(&ClientIdleState{})
 }
 
 func (client *Client) OnReceived(data []byte) {
-
+	state := client.cliState.GetState()
+	state.(SessionState).OnReceived(client, data)
 }
 
 func (client *Client) IsState(s int) bool {
