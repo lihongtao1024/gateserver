@@ -91,14 +91,23 @@ func (comp *timerComponent) addTimerImpl(timer *timerImpl) {
 }
 
 func (comp *timerComponent) onTimerImpl(timer *timerImpl) {
+	timer.tmrLink.pPrev = &timer.tmrLink
+	timer.tmrLink.pNext = &timer.tmrLink
+
 	if timer.tmrCount == InfiniteTimer {
 		timer.tmrCallback.OnTimer(timer)
 	} else {
 		timer.tmrCount--
 		timer.tmrCallback.OnTimer(timer)
-		if timer.tmrCount == 0 {
-			return
-		}
+	}
+
+	if timer.tmrCount == 0 {
+		return
+	}
+
+	if timer.tmrLink.pPrev != &timer.tmrLink ||
+		timer.tmrLink.pNext != &timer.tmrLink {
+		return
 	}
 
 	timer.tmrTimeout = comp.lastTick + timer.tmrInterval
@@ -164,6 +173,7 @@ func (comp *timerComponent) ModifyTimer(t Timer, callback Callback, interval uin
 
 func (comp *timerComponent) DelTimer(t Timer) {
 	timer := t.(*timerImpl)
+	timer.tmrCount = 0
 	timer.tmrLink.pNext.pPrev = timer.tmrLink.pPrev
 	timer.tmrLink.pPrev.pNext = timer.tmrLink.pNext
 	timer.tmrLink.pNext = &timer.tmrLink
