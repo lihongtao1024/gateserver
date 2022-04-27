@@ -7,6 +7,7 @@ import (
 	"gateserver/logsystem"
 	"gateserver/netsystem"
 	"gateserver/protosystem"
+	"gateserver/timersystem"
 	"os"
 	"strconv"
 	"sync"
@@ -98,6 +99,7 @@ func (app *Application) doApp() {
 			if app.isStatus(appClosing) {
 				app.setStatus(appClosed)
 			}
+			timersystem.Instance.Do()
 			busy = netsystem.Instance.Do() || busy
 			if !busy {
 				time.Sleep(appHeartBeatTimeout)
@@ -121,6 +123,11 @@ func (app *Application) appInit() bool {
 		return false
 	}
 	logsystem.Instance.Sys("init log system [ok].")
+
+	if timersystem.NewTimerSystemInstance() == nil {
+		return false
+	}
+	logsystem.Instance.Sys("init timer system [ok].")
 
 	if netsystem.NewNetSystemInstance(app.appIndex) == nil {
 		return false
@@ -151,6 +158,11 @@ func (app *Application) appUninit() {
 	if protosystem.Instance != nil {
 		logsystem.Instance.Sys("uninit proto system [ok].")
 		protosystem.Instance.Close()
+	}
+
+	if timersystem.Instance != nil {
+		logsystem.Instance.Sys("uninit timer system [ok].")
+		timersystem.Instance.Close()
 	}
 
 	if logsystem.Instance != nil {

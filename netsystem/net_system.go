@@ -5,20 +5,21 @@ import (
 	"gateserver/configsystem"
 	"gateserver/internal/configs"
 	"gateserver/internal/networks"
+	"gateserver/internal/timers"
 	"gateserver/logsystem"
+	"gateserver/timersystem"
 	"sync"
-	"time"
 	"unsafe"
 )
 
 const (
-	netCheckTimeout  = time.Second * 5
+	netCheckTimeout  = uint32(5000)
 	netPackageHeader = int(unsafe.Sizeof(int32(0)))
 )
 
 type NetSystem struct {
 	svrSessions  []*Server
-	svrTimer     *time.Ticker
+	svrTimer     timers.Timer
 	netComponent networks.Component
 	gtListener   networks.Listener
 	gtClients    map[interface{}]*Client
@@ -31,7 +32,11 @@ func NewNetSystemInstance(index int) *NetSystem {
 	thisOnce.Do(func() {
 		Instance = &NetSystem{}
 		Instance.svrSessions = make([]*Server, 0)
-		Instance.svrTimer = time.NewTicker(netCheckTimeout)
+		Instance.svrTimer = timersystem.Instance.AddTimer(
+			Instance,
+			netCheckTimeout,
+			timers.InfiniteTimer,
+		)
 		Instance.gtClients = make(map[interface{}]*Client)
 
 		wslistenattr := configsystem.Instance.GetServerAttr(
@@ -107,7 +112,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 			return
 		}
 
-		Instance.checkServer()
+		Instance.OnTimer(nil)
 
 		logsystem.Instance.Inf(
 			"listen on [GT%d]: [%s:%d] [ok].",
@@ -120,7 +125,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 	return Instance
 }
 
-func (ss *NetSystem) checkServer() {
+func (ss *NetSystem) OnTimer(t timers.Timer) {
 	for _, server := range ss.svrSessions {
 		if server.IsState(ServerIdle) {
 			server.SwitchState(&ServerConnectingState{})
@@ -203,17 +208,11 @@ func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
 }
 
 func (ss *NetSystem) Do() bool {
-	select {
-	case <-ss.svrTimer.C:
-		ss.checkServer()
-	default:
-	}
-
 	return ss.netComponent.Do()
 }
 
 func (ss *NetSystem) Close() {
-	ss.svrTimer.Stop()
+	timersystem.Instance.DelTimer(ss.svrTimer)
 
 	for _, session := range ss.svrSessions {
 		session.Disconnect()

@@ -16,7 +16,7 @@ func NewLogSystemInstance(name string) loggers.Component {
 		config := configsystem.Instance.GetLogAttr()
 		Instance = loggers.NewLogger(config.Flag, name, config.Output)
 		if Instance == nil {
-			fmt.Fprintf(os.Stderr, "init log component [fail].\n")
+			fmt.Fprintf(os.Stderr, "init log system [fail].\n")
 		}
 	})
 
