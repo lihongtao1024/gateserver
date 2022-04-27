@@ -203,7 +203,7 @@ func writeProtocol(defproto *DefProtoMoudle) error {
 		file.Close()
 	}()
 
-	writer.WriteString("///>本代码由自动化工具批量生成\n")
+	writer.WriteString("///>本代码由测试工具自动生成,请勿手动修改\n")
 	writer.WriteString("package protocols\n\n")
 	if defproto.isproto {
 		writer.WriteString("import (\n\t\"bytes\"\n\t\"encoding/binary\"\n\t\"fmt\"\n\t\"unsafe\"\n)\n\n")

@@ -112,7 +112,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 			return
 		}
 
-		Instance.OnTimer(nil)
+		Instance.OnTimer()
 
 		logsystem.Instance.Inf(
 			"listen on [GT%d]: [%s:%d] [ok].",
@@ -125,10 +125,10 @@ func NewNetSystemInstance(index int) *NetSystem {
 	return Instance
 }
 
-func (ss *NetSystem) OnTimer(t timers.Timer) {
+func (ss *NetSystem) OnTimer() {
 	for _, server := range ss.svrSessions {
 		if server.IsState(ServerIdle) {
-			server.SwitchState(&ServerConnectingState{})
+			//server.SwitchState(&ServerConnectingState{})
 		}
 	}
 }

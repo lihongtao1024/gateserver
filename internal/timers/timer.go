@@ -3,10 +3,12 @@ package timers
 type Timer interface {
 	GetInterval() uint32
 	GetCount() uint32
+	SetData(interface{})
+	GetData() interface{}
 }
 
 type Callback interface {
-	OnTimer(Timer)
+	OnTimer()
 }
 
 type loopLink struct {
@@ -23,6 +25,7 @@ type timerImpl struct {
 	tmrCount    uint32
 	tmrCallback Callback
 	tmrLink     loopLink
+	tmrData     interface{}
 }
 
 func (timer *timerImpl) GetInterval() uint32 {
@@ -31,4 +34,12 @@ func (timer *timerImpl) GetInterval() uint32 {
 
 func (timer *timerImpl) GetCount() uint32 {
 	return timer.tmrCount
+}
+
+func (timer *timerImpl) SetData(o interface{}) {
+	timer.tmrData = o
+}
+
+func (timer *timerImpl) GetData() interface{} {
+	return timer.tmrData
 }

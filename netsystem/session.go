@@ -5,4 +5,5 @@ type Session interface {
 	OnFatal(err error)
 	OnClosed()
 	OnReceived(data []byte)
+	Disconnect()
 }

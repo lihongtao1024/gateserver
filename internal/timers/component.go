@@ -95,10 +95,10 @@ func (comp *timerComponent) onTimerImpl(timer *timerImpl) {
 	timer.tmrLink.pNext = &timer.tmrLink
 
 	if timer.tmrCount == InfiniteTimer {
-		timer.tmrCallback.OnTimer(timer)
+		timer.tmrCallback.OnTimer()
 	} else {
 		timer.tmrCount--
-		timer.tmrCallback.OnTimer(timer)
+		timer.tmrCallback.OnTimer()
 	}
 
 	if timer.tmrCount == 0 {

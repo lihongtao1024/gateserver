@@ -79,8 +79,7 @@ func (client *Client) Send(data []byte) bool {
 }
 
 func (client *Client) Disconnect() {
-	if !client.cliState.IsState(ServerConnected) &&
-		!client.cliState.IsState(ServerWorking) {
+	if client.cliState.IsState(ClientIdle) {
 		return
 	}
 
