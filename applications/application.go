@@ -97,6 +97,7 @@ func (app *Application) doApp() {
 		busy := false
 		for !app.IsClosed() {
 			if app.isStatus(appClosing) {
+				app.appUninit()
 				app.setStatus(appClosed)
 			}
 			timersystem.Instance.Do()
@@ -106,10 +107,9 @@ func (app *Application) doApp() {
 			}
 		}
 	} else {
+		app.appUninit()
 		app.setStatus(appClosed)
 	}
-
-	app.appUninit()
 }
 
 func (app *Application) appInit() bool {

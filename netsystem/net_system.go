@@ -128,7 +128,7 @@ func NewNetSystemInstance(index int) *NetSystem {
 func (ss *NetSystem) OnTimer() {
 	for _, server := range ss.svrSessions {
 		if server.IsState(ServerIdle) {
-			//server.SwitchState(&ServerConnectingState{})
+			server.SwitchState(&ServerConnectingState{})
 		}
 	}
 }

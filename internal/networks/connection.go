@@ -2,11 +2,11 @@ package networks
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Connection interface {
@@ -16,7 +16,6 @@ type Connection interface {
 	GetRemoteAddr() string
 	Send(data []byte) bool
 	IsDialFatal() bool
-	IsDisconnected() bool
 	Disconnect()
 }
 
@@ -31,6 +30,8 @@ const (
 	connClosing   = 1
 	connClosed    = 2
 )
+
+const connReadTimeout = time.Second
 
 type connEvent interface {
 	getType() int
@@ -99,22 +100,22 @@ func (conn *tcpConnection) readBytes() {
 	recvbuf := bytes.NewBuffer([]byte{})
 
 	for {
-		if conn.isClosed() {
-			return
-		}
-
+		conn.netConn.SetReadDeadline(time.Now().Add(connReadTimeout))
 		len, err := conn.netConn.Read(buf)
 		if err != nil {
-			if err != io.EOF {
-				conn.postFatal(err)
+			if err == io.EOF {
+				conn.postClosing()
+				return
 			}
-			conn.Disconnect()
-			break
-		}
 
-		if len == 0 {
-			conn.Disconnect()
-			break
+			operr := err.(*net.OpError)
+			if operr != nil && operr.Err.Error() == "i/o timeout" {
+				continue
+			}
+
+			conn.postFatal(err)
+			conn.postClosing()
+			return
 		}
 
 		recvbuf.Write(buf[:len])
@@ -125,7 +126,6 @@ func (conn *tcpConnection) readBytes() {
 			if length == FragmentContinue {
 				break
 			} else if length == FragmentFatal {
-				conn.postFatal(errors.New("unpack data fatal"))
 				conn.Disconnect()
 				break
 			}
@@ -145,11 +145,8 @@ func (conn *tcpConnection) readBytes() {
 
 func (conn *tcpConnection) writeBytes() {
 	var event connEvent
-	for {
-		if conn.isClosed() {
-			return
-		}
 
+	for {
 		event = <-conn.eventChan
 		switch event.getType() {
 		case connFatal:
@@ -160,6 +157,7 @@ func (conn *tcpConnection) writeBytes() {
 			{
 				conn.setClosed()
 				conn.netComp.postClosed(conn)
+				return
 			}
 		default:
 			{
@@ -169,7 +167,6 @@ func (conn *tcpConnection) writeBytes() {
 				for pos < len {
 					bytes, err := conn.netConn.Write(data[pos:])
 					if err != nil {
-						conn.postFatal(err)
 						conn.Disconnect()
 						break
 					}
@@ -181,25 +178,28 @@ func (conn *tcpConnection) writeBytes() {
 	}
 }
 
-func (conn *tcpConnection) postSend(data []byte) {
+func (conn *tcpConnection) postSend(data []byte) (result bool) {
+	defer func() {
+		result = false
+	}()
+
 	slice := make([]byte, len(data))
 	copy(slice, data)
 
 	evt := &connSendEvent{
 		data: slice,
 	}
-
 	conn.eventChan <- evt
+
+	result = true
+	return
 }
 
 func (conn *tcpConnection) postFatal(err error) {
-	conn.fatalOnce.Do(func() {
-		evt := &connFatalEvent{
-			err: err,
-		}
-
-		conn.eventChan <- evt
-	})
+	evt := &connFatalEvent{
+		err: err,
+	}
+	conn.eventChan <- evt
 }
 
 func (conn *tcpConnection) postClosing() {
@@ -221,10 +221,6 @@ func (conn *tcpConnection) setClosed() {
 	close(conn.eventChan)
 }
 
-func (conn *tcpConnection) isClosed() bool {
-	return atomic.LoadInt32(&conn.netStatus) == connClosed
-}
-
 func (conn *tcpConnection) SetData(data interface{}) {
 	conn.customData = data
 }
@@ -242,25 +238,20 @@ func (conn *tcpConnection) GetRemoteAddr() string {
 }
 
 func (conn *tcpConnection) Send(data []byte) bool {
-	if conn.IsDisconnected() {
+	if atomic.LoadInt32(&conn.netStatus) != connConnected {
 		return false
 	}
 
-	conn.postSend(data)
-	return true
+	return conn.postSend(data)
 }
 
 func (conn *tcpConnection) IsDialFatal() bool {
 	return conn.netConn == nil
 }
 
-func (conn *tcpConnection) IsDisconnected() bool {
-	return atomic.LoadInt32(&conn.netStatus) > connConnected
-}
-
 func (conn *tcpConnection) Disconnect() {
 	conn.closeOnce.Do(func() {
 		atomic.StoreInt32(&conn.netStatus, connClosing)
-		conn.postClosing()
+		conn.netConn.CloseRead()
 	})
 }

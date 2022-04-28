@@ -100,6 +100,7 @@ func loggerHandler(comp *logComponent) {
 	comp.waitGroup.Add(1)
 
 	defer func() {
+		comp.logFile.Sync()
 		comp.logFile.Close()
 		close(comp.logEvents)
 		comp.waitGroup.Done()
