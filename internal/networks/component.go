@@ -78,7 +78,7 @@ func NewComponent(dispatch Dispatch, fragment Fragment) Component {
 		comDispatch: dispatch,
 		waitGroup:   &sync.WaitGroup{},
 		finishChan:  make(chan struct{}),
-		eventChan:   make(chan comEvent, 102400),
+		eventChan:   make(chan comEvent, 409600),
 	}
 
 	return comp
@@ -196,24 +196,26 @@ func (comp *tcpComponent) Do() bool {
 		{
 			switch event.getType() {
 			case comConnected:
-				comp.comDispatch.OnConnected(
-					event.(*comConnectedEvent).listener,
-					event.(*comConnectedEvent).conn,
-				)
+				{
+					evt := event.(*comConnectedEvent)
+					comp.comDispatch.OnConnected(evt.listener, evt.conn)
+				}
 			case comFatal:
-				comp.comDispatch.OnFatal(
-					event.(*comFatalEvent).err,
-					event.(*comFatalEvent).conn,
-				)
+				{
+					evt := event.(*comFatalEvent)
+					comp.comDispatch.OnFatal(evt.err, evt.conn)
+				}
 			case comClosed:
-				comp.comDispatch.OnClosed(
-					event.(*comClosedEvent).conn,
-				)
+				{
+					conn := event.(*comClosedEvent).conn
+					conn.close()
+					comp.comDispatch.OnClosed(conn)
+				}
 			default:
-				comp.comDispatch.OnReceived(
-					event.(*comMessageEvent).data,
-					event.(*comMessageEvent).conn,
-				)
+				{
+					evt := event.(*comMessageEvent)
+					comp.comDispatch.OnReceived(evt.data, evt.conn)
+				}
 			}
 			busy = true
 		}

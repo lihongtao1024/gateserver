@@ -64,7 +64,6 @@ type tcpConnection struct {
 	netStatus  int32
 	netComp    *tcpComponent
 	netConn    *net.TCPConn
-	fatalOnce  *sync.Once
 	closeOnce  *sync.Once
 	eventChan  chan connEvent
 	customData interface{}
@@ -75,9 +74,8 @@ func NewConnection(comp *tcpComponent, conn *net.TCPConn) Connection {
 		netStatus: connConnected,
 		netComp:   comp,
 		netConn:   conn,
-		fatalOnce: &sync.Once{},
 		closeOnce: &sync.Once{},
-		eventChan: make(chan connEvent, 4096),
+		eventChan: make(chan connEvent, 8192),
 	}
 	return connection
 }
@@ -217,8 +215,6 @@ func (conn *tcpConnection) asyncDo(fn func()) {
 
 func (conn *tcpConnection) setClosed() {
 	atomic.StoreInt32(&conn.netStatus, connClosed)
-	conn.netConn.Close()
-	close(conn.eventChan)
 }
 
 func (conn *tcpConnection) SetData(data interface{}) {
@@ -254,4 +250,9 @@ func (conn *tcpConnection) Disconnect() {
 		atomic.StoreInt32(&conn.netStatus, connClosing)
 		conn.netConn.CloseRead()
 	})
+}
+
+func (conn *tcpConnection) close() {
+	conn.netConn.Close()
+	close(conn.eventChan)
 }
