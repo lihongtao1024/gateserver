@@ -7,6 +7,7 @@ import (
 	"gateserver/logsystem"
 	"gateserver/netsystem"
 	"gateserver/protosystem"
+	"gateserver/protosystem/messages"
 	"gateserver/timersystem"
 	"os"
 	"strconv"
@@ -134,7 +135,10 @@ func (app *Application) appInit() bool {
 	}
 	logsystem.Instance.Sys("init net system [ok].")
 
-	if protosystem.NewProtoSystemInstance(app.appIndex) == nil {
+	if protosystem.NewProtoSystemInstance(
+		app.appIndex,
+		messages.NewGT2WSProto(),
+	) == nil {
 		return false
 	}
 	logsystem.Instance.Sys("init proto system [ok].")

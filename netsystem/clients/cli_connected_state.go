@@ -1,9 +1,8 @@
-package netsystem
+package clients
 
 import (
 	"gateserver/internal/timers"
 	"gateserver/logsystem"
-	"gateserver/protosystem"
 	"gateserver/timersystem"
 )
 
@@ -34,15 +33,13 @@ func (state *ClientConnectedState) OnLeave(o interface{}) {
 
 func (state *ClientConnectedState) OnReceived(o interface{}, data []byte) {
 	client := o.(*Client)
-	if err := protosystem.Instance.VerifyClientHandShakeReq(data); err != nil {
+	if err := client.VerifyHandShakeReq(data); err != nil {
 		logsystem.Instance.Err("[%s] %s.", client.GetLogicName(), err)
 		client.Disconnect()
 		return
 	}
 
-	data = protosystem.Instance.BuildClientHandShakeRsp()
-	client.Send(data)
-
+	client.SendHandShakeRsp()
 	client.SwitchState(&ClientWorkingState{})
 }
 

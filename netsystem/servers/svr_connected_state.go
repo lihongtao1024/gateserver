@@ -1,8 +1,7 @@
-package netsystem
+package servers
 
 import (
 	"gateserver/logsystem"
-	"gateserver/protosystem"
 )
 
 type ServerConnectedState struct {
@@ -16,8 +15,7 @@ func (state *ServerConnectedState) OnEnter(o interface{}) {
 	server := o.(*Server)
 	logsystem.Instance.Dbg("[%s] enter ServerConnectedState.", server.GetLogicName())
 
-	data := protosystem.Instance.BuildServerHandShakeReq()
-	server.Send(data)
+	server.SendHandShakeReq()
 }
 
 func (state *ServerConnectedState) OnLeave(o interface{}) {
@@ -27,8 +25,7 @@ func (state *ServerConnectedState) OnLeave(o interface{}) {
 
 func (state *ServerConnectedState) OnReceived(o interface{}, data []byte) {
 	server := o.(*Server)
-	if err := protosystem.Instance.VerifyServerHandShakeRsp(
-		uint16(server.GetIndex()), data); err != nil {
+	if err := server.VerifyHandShakeRsp(data); err != nil {
 		logsystem.Instance.Err("[%s] %s.", server.GetLogicName(), err)
 		server.Disconnect()
 		return

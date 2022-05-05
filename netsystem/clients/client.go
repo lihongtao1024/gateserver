@@ -1,22 +1,42 @@
-package netsystem
+package clients
 
 import (
+	"encoding/binary"
 	"fmt"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
+	"gateserver/internal/protocols"
 	"gateserver/logsystem"
+	"gateserver/netsystem/sessions"
+	"gateserver/protosystem"
+	"math/rand"
+	"unsafe"
+)
+
+const (
+	ClientIdle       = 0
+	ClientConnected  = 1
+	ClientWorking    = 2
+	ClientVerifying  = 3
+	ClientRequesting = 4
+	ClientLoggedIn   = 5
+	ClientPlaying    = 6
 )
 
 type Client struct {
-	cliUid   uint32
-	cliConn  networks.Connection
-	cliState machines.Machine
+	cliUid     uint32
+	cliConn    networks.Connection
+	cliState   machines.Machine
+	cliRandKey []byte
 }
 
 func NewClient(conn networks.Connection) *Client {
 	client := &Client{cliConn: conn}
 	client.cliState = machines.NewMachine(client)
 	client.cliState.SwitchState(&ClientIdleState{})
+	client.cliRandKey = make([]byte, unsafe.Sizeof(uint64(0)))
+	binary.LittleEndian.PutUint64(client.cliRandKey, rand.Uint64())
+
 	return client
 }
 
@@ -26,6 +46,10 @@ func (client *Client) GetUid() uint32 {
 
 func (client *Client) GetLogicName() string {
 	return fmt.Sprintf("%p Uid:%d", client, client.cliUid)
+}
+
+func (client *Client) GetRandKey() []byte {
+	return client.cliRandKey
 }
 
 func (client *Client) OnConnected() {
@@ -63,15 +87,36 @@ func (client *Client) OnClosed() {
 
 func (client *Client) OnReceived(data []byte) {
 	state := client.cliState.GetState()
-	state.(SessionState).OnReceived(client, data)
+	state.(sessions.SessionState).OnReceived(client, data)
 }
 
 func (client *Client) IsState(s int) bool {
 	return client.cliState.IsState(s)
 }
 
-func (client *Client) SwitchState(state SessionState) {
+func (client *Client) SwitchState(state sessions.SessionState) {
 	client.cliState.SwitchState(state)
+}
+
+func (client *Client) VerifyHandShakeReq(data []byte) error {
+	return protosystem.Instance.VerifyClientHandShakeReq(data)
+}
+
+func (client *Client) SendHandShakeRsp() bool {
+	data := protosystem.Instance.BuildClientHandShakeRsp()
+	return client.Send(data)
+}
+
+func (client *Client) SendRandKey() bool {
+	proto := &protocols.RandKeyNtf{}
+	proto.Code_content = client.GetRandKey()
+
+	result, data := protosystem.Instance.BuildRawProto(proto)
+	if !result {
+		return false
+	}
+
+	return client.Send(data)
 }
 
 func (client *Client) Send(data []byte) bool {

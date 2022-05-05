@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"gateserver/applications"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	rand.Seed(time.Now().UnixMicro())
 
 	if len(os.Args) < 3 {
 		return

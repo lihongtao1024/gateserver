@@ -1,4 +1,4 @@
-package netsystem
+package clients
 
 import (
 	"gateserver/logsystem"
@@ -20,7 +20,6 @@ func (state *ClientRequestingState) OnEnter(o interface{}) {
 func (state *ClientRequestingState) OnLeave(o interface{}) {
 	client := o.(*Client)
 	logsystem.Instance.Dbg("[%s] leave ClientRequestingState.", client.GetLogicName())
-
 }
 
 func (state *ClientRequestingState) OnReceived(o interface{}, data []byte) {

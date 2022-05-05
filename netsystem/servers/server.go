@@ -1,11 +1,20 @@
-package netsystem
+package servers
 
 import (
 	"gateserver/internal/configs"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
 	"gateserver/logsystem"
+	"gateserver/netsystem/sessions"
+	"gateserver/protosystem"
 	"strconv"
+)
+
+const (
+	ServerIdle       = 0
+	ServerConnecting = 1
+	ServerConnected  = 2
+	ServerWorking    = 3
 )
 
 type Server struct {
@@ -13,14 +22,16 @@ type Server struct {
 	svrType  int
 	svrAttr  *configs.ListenAttr
 	svrConn  networks.Connection
+	svrComp  networks.Component
 	svrState machines.Machine
 }
 
-func NewServer(i, t int, attr *configs.ListenAttr) *Server {
+func NewServer(i, t int, attr *configs.ListenAttr, comp networks.Component) *Server {
 	svr := &Server{
 		svrIndex: i,
 		svrType:  t,
 		svrAttr:  attr,
+		svrComp:  comp,
 	}
 	svr.svrState = machines.NewMachine(svr)
 	svr.svrState.SwitchState(&ServerIdleState{})
@@ -86,11 +97,11 @@ func (svr *Server) OnClosed() {
 
 func (svr *Server) OnReceived(data []byte) {
 	state := svr.svrState.GetState()
-	state.(SessionState).OnReceived(svr, data)
+	state.(sessions.SessionState).OnReceived(svr, data)
 }
 
 func (svr *Server) Connect() bool {
-	svr.svrConn = Instance.netComponent.Connect(
+	svr.svrConn = svr.svrComp.Connect(
 		svr.svrAttr.Ip,
 		uint16(svr.svrAttr.Port),
 	)
@@ -118,8 +129,17 @@ func (svr *Server) IsState(s int) bool {
 	return svr.svrState.IsState(s)
 }
 
-func (svr *Server) SwitchState(state SessionState) {
+func (svr *Server) SwitchState(state sessions.SessionState) {
 	svr.svrState.SwitchState(state)
+}
+
+func (svr *Server) SendHandShakeReq() bool {
+	data := protosystem.Instance.BuildServerHandShakeReq()
+	return svr.Send(data)
+}
+
+func (svr *Server) VerifyHandShakeRsp(data []byte) error {
+	return protosystem.Instance.VerifyServerHandShakeRsp(uint16(svr.GetIndex()), data)
 }
 
 func (svr *Server) Send(data []byte) bool {

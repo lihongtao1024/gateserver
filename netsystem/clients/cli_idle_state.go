@@ -1,4 +1,4 @@
-package netsystem
+package clients
 
 import (
 	"gateserver/logsystem"
