@@ -1,10 +1,10 @@
 package messages
 
 import (
-	"fmt"
 	"gateserver/internal/protocols"
 	"gateserver/netsystem/clients"
 	"gateserver/protosystem"
+	"gateserver/verifysystem"
 )
 
 type GT2WSProto struct {
@@ -27,6 +27,5 @@ func (protos *GT2WSProto) Dispatch(data []byte) bool {
 
 func (protos *GT2WSProto) OnLoginReq(proto *protocols.LoginReq) {
 	client := protosystem.Instance.GetDecodeSession().(*clients.Client)
-	fmt.Println(proto)
-	client.SendHandShakeRsp()
+	verifysystem.Instance.PostRequest(client, proto)
 }

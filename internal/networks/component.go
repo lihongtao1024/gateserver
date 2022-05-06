@@ -85,8 +85,6 @@ func NewComponent(dispatch Dispatch, fragment Fragment) Component {
 }
 
 func (comp *tcpComponent) onAccpeted(listener *net.TCPListener) {
-	comp.waitGroup.Add(1)
-
 	defer func() {
 		listener.Close()
 		comp.waitGroup.Done()
@@ -160,15 +158,19 @@ func (comp *tcpComponent) Listen(ip string, port uint16) Listener {
 		return nil
 	}
 
+	comp.waitGroup.Add(1)
 	go comp.onAccpeted(listener)
+
 	return listener
 }
 
 func (comp *tcpComponent) Connect(ip string, port uint16) Connection {
-	comp.waitGroup.Add(1)
 	connection := NewConnection(comp, nil)
+	comp.waitGroup.Add(1)
 
 	go func() {
+		defer comp.waitGroup.Done()
+
 		addr, err := net.ResolveTCPAddr("tcp4", ip+":"+strconv.Itoa(int(port)))
 		if err != nil {
 			comp.postFatal(connection.(*tcpConnection), err)
@@ -182,7 +184,6 @@ func (comp *tcpComponent) Connect(ip string, port uint16) Connection {
 		}
 
 		connection.(*tcpConnection).onConnected(conn)
-		comp.waitGroup.Done()
 	}()
 
 	return connection

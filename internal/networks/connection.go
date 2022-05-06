@@ -207,9 +207,10 @@ func (conn *tcpConnection) postClosing() {
 
 func (conn *tcpConnection) asyncDo(fn func()) {
 	conn.netComp.waitGroup.Add(1)
+
 	go func() {
+		defer conn.netComp.waitGroup.Done()
 		fn()
-		conn.netComp.waitGroup.Done()
 	}()
 }
 

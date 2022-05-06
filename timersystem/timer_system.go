@@ -10,7 +10,7 @@ import (
 var Instance timers.Component
 var thisOnce sync.Once
 
-func NewTimerSystemInstance() timers.Component {
+func NewInstance() timers.Component {
 	thisOnce.Do(func() {
 		Instance = timers.NewComponent()
 		if Instance == nil {

@@ -14,7 +14,6 @@ func (state *ClientVerifyingState) GetType() int {
 func (state *ClientVerifyingState) OnEnter(o interface{}) {
 	client := o.(*Client)
 	logsystem.Instance.Dbg("[%s] enter ClientVerifyingState.", client.GetLogicName())
-
 }
 
 func (state *ClientVerifyingState) OnLeave(o interface{}) {

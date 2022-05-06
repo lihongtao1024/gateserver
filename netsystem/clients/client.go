@@ -3,6 +3,7 @@ package clients
 import (
 	"encoding/binary"
 	"fmt"
+	"gateserver/internal/errors"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
 	"gateserver/internal/protocols"
@@ -24,10 +25,25 @@ const (
 )
 
 type Client struct {
-	cliUid     uint32
-	cliConn    networks.Connection
-	cliState   machines.Machine
-	cliRandKey []byte
+	cliHeartBeat   bool
+	cliAntiIndulge bool
+	cliThirdUser   bool
+	cliSid         uint8
+	cliGSid        uint8
+	cliUid         uint32
+	cliZid         uint32
+	cliAid         uint32
+	cliIp          uint32
+	cliSUid        uint64
+	cliUname       string
+	cliHardware    string
+	cliLongitude   string
+	cliLatitude    string
+	cliPlatform    string
+	cliConn        networks.Connection
+	cliState       machines.Machine
+	cliRandKey     []byte
+	cliPassword    []byte
 }
 
 func NewClient(conn networks.Connection) *Client {
@@ -40,12 +56,133 @@ func NewClient(conn networks.Connection) *Client {
 	return client
 }
 
+func (client *Client) SetUName(name string) {
+	client.cliUname = name
+}
+
+func (client *Client) GetUName() string {
+	return client.cliUname
+}
+
+func (client *Client) SetUid(uid uint32) {
+	client.cliUid = uid
+}
+
 func (client *Client) GetUid() uint32 {
-	return 0
+	return client.cliUid
+}
+
+func (client *Client) SetHeartbeat(heartbeat bool) {
+	client.cliHeartBeat = heartbeat
+}
+
+func (client *Client) GetHeartbeat() bool {
+	return client.cliHeartBeat
+}
+
+func (client *Client) SetAntiIndulge(antiindulge bool) {
+	client.cliAntiIndulge = antiindulge
+}
+
+func (client *Client) GetAntiIndulge() bool {
+	return client.cliAntiIndulge
+}
+
+func (client *Client) SetThirdUser(thirduser bool) {
+	client.cliThirdUser = thirduser
+}
+
+func (client *Client) GetThirdUser() bool {
+	return client.cliThirdUser
+}
+
+func (client *Client) SetSid(sid uint8) {
+	client.cliSid = sid
+}
+
+func (client *Client) GetSid() uint8 {
+	return client.cliSid
+}
+
+func (client *Client) SetGSid(gsid uint8) {
+	client.cliGSid = gsid
+}
+
+func (client *Client) GetGSid() uint8 {
+	return client.cliGSid
+}
+
+func (client *Client) SetZid(zid uint32) {
+	client.cliZid = zid
+}
+
+func (client *Client) GetZid() uint32 {
+	return client.cliZid
+}
+
+func (client *Client) SetAid(aid uint32) {
+	client.cliAid = aid
+}
+
+func (client *Client) GetAid() uint32 {
+	return client.cliAid
+}
+
+func (client *Client) SetIp(ip uint32) {
+	client.cliIp = ip
+}
+
+func (client *Client) GetIp() uint32 {
+	return client.cliIp
+}
+
+func (client *Client) GetSUid() uint64 {
+	return client.cliSUid
+}
+
+func (client *Client) SetLongitude(longitude string) {
+	client.cliLongitude = longitude
+}
+
+func (client *Client) GetLongitude() string {
+	return client.cliLongitude
+}
+
+func (client *Client) SetLatitude(latitude string) {
+	client.cliLatitude = latitude
+}
+
+func (client *Client) GetLatitude() string {
+	return client.cliLatitude
+}
+
+func (client *Client) SetPasssword(pwd []byte) {
+	client.cliPassword = make([]byte, len(pwd))
+	copy(client.cliPassword, pwd)
+}
+
+func (client *Client) GetPassword() []byte {
+	return client.cliPassword
+}
+
+func (client *Client) SetHardware(hw string) {
+	client.cliHardware = hw
+}
+
+func (client *Client) GetHardware() string {
+	return client.cliHardware
+}
+
+func (client *Client) SetPlatform(platform string) {
+	client.cliPlatform = platform
+}
+
+func (client *Client) GetPlatform() string {
+	return client.cliPlatform
 }
 
 func (client *Client) GetLogicName() string {
-	return fmt.Sprintf("%p Uid:%d", client, client.cliUid)
+	return fmt.Sprintf("%p Uname:%s,Uid:%d", client, client.cliUname, client.cliUid)
 }
 
 func (client *Client) GetRandKey() []byte {
@@ -111,7 +248,28 @@ func (client *Client) SendRandKey() bool {
 	proto := &protocols.RandKeyNtf{}
 	proto.Code_content = client.GetRandKey()
 
-	result, data := protosystem.Instance.BuildRawProto(proto)
+	result, data := protosystem.Instance.BuildClientProto(proto)
+	if !result {
+		return false
+	}
+
+	return client.Send(data)
+}
+
+func (client *Client) SendLoginAck(err errors.SysError) bool {
+	proto := &protocols.LoginAck{}
+	proto.Uid = client.cliUid
+	proto.Guid = 0
+	proto.Suid = 0
+	proto.Rid = 0
+
+	code := err.Code()
+	if code != errors.ErrorOk {
+		proto.Errcode = code
+		proto.Errmsg = err.Error()
+	}
+
+	result, data := protosystem.Instance.BuildClientProto(proto)
 	if !result {
 		return false
 	}
@@ -124,7 +282,7 @@ func (client *Client) Send(data []byte) bool {
 }
 
 func (client *Client) Disconnect() {
-	if client.cliState.IsState(ClientIdle) {
+	if client.cliConn == nil {
 		return
 	}
 

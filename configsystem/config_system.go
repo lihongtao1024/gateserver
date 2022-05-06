@@ -14,7 +14,7 @@ const (
 var Instance *configs.Config
 var thisOnce sync.Once
 
-func NewConfigSystemInstance() *configs.Config {
+func NewInstance() *configs.Config {
 	thisOnce.Do(func() {
 		Instance = configs.LoadConfig(configPath)
 		if Instance == nil {

@@ -470,3 +470,7 @@ func (config *Config) GetServerAttr(id, index, subid int) *ListenAttr {
 
 	return nil
 }
+
+func (config *Config) IsVirtual() bool {
+	return config.fakeAttr
+}

@@ -11,7 +11,7 @@ import (
 var Instance loggers.Component
 var thisOnce sync.Once
 
-func NewLogSystemInstance(name string) loggers.Component {
+func NewInstance(name string) loggers.Component {
 	thisOnce.Do(func() {
 		config := configsystem.Instance.GetLogAttr()
 		Instance = loggers.NewLogger(config.Flag, name, config.Output)

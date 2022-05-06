@@ -21,6 +21,7 @@ const (
 )
 
 type NetSystem struct {
+	gtIndex      int
 	svrSessions  []*servers.Server
 	svrTimer     timers.Timer
 	netComponent networks.Component
@@ -31,9 +32,10 @@ type NetSystem struct {
 var Instance *NetSystem
 var thisOnce sync.Once
 
-func NewNetSystemInstance(index int) *NetSystem {
+func NewInstance(index int) *NetSystem {
 	thisOnce.Do(func() {
 		Instance = &NetSystem{}
+		Instance.gtIndex = index
 		Instance.svrSessions = make([]*servers.Server, 0)
 		Instance.svrTimer = timersystem.Instance.AddTimer(
 			Instance,
@@ -97,43 +99,27 @@ func NewNetSystemInstance(index int) *NetSystem {
 			servers.NewServer(1, configs.ServerIdCt, cslistenattr, Instance.netComponent),
 		)
 
-		gtlistenattr := configsystem.Instance.GetServerAttr(
-			configs.ServerIdGt,
-			index,
-			configs.ServerIdCl,
-		)
-		if gtlistenattr == nil {
-			Instance = nil
-			return
-		}
-
-		Instance.gtListener = Instance.netComponent.Listen(
-			gtlistenattr.Ip,
-			uint16(gtlistenattr.Port),
-		)
-		if Instance.gtListener == nil {
-			Instance = nil
-			return
-		}
-
 		Instance.OnTimer()
-
-		logsystem.Instance.Inf(
-			"listen on [GT%d]: [%s:%d] [ok].",
-			index,
-			gtlistenattr.Ip,
-			gtlistenattr.Port,
-		)
 	})
 
 	return Instance
 }
 
 func (ss *NetSystem) OnTimer() {
+	allworking := true
+
 	for _, server := range ss.svrSessions {
+		if !server.IsState(servers.ServerWorking) {
+			allworking = false
+		}
+
 		if server.IsState(servers.ServerIdle) {
 			server.SwitchState(&servers.ServerConnectingState{})
 		}
+	}
+
+	if allworking {
+		ss.OnListen()
 	}
 }
 
@@ -160,7 +146,7 @@ func (ss *NetSystem) Connect(ip string, port uint16) networks.Connection {
 }
 
 func (ss *NetSystem) OnConnected(listener networks.Listener, conn networks.Connection) {
-	if listener == ss.gtListener {
+	if listener != nil && listener == ss.gtListener {
 		client := clients.NewClient(conn)
 		if _, ok := ss.gtClients[conn]; ok {
 			logsystem.Instance.Err("on connected, system error:1.")
@@ -213,6 +199,46 @@ func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
 		return
 	}
 	server.OnReceived(data[unsafe.Sizeof(uint32(0)):])
+}
+
+func (ss *NetSystem) OnListen() {
+	if ss.gtListener != nil {
+		return
+	}
+
+	listenattr := configsystem.Instance.GetServerAttr(
+		configs.ServerIdGt,
+		ss.gtIndex,
+		configs.ServerIdCl,
+	)
+	if listenattr == nil {
+		logsystem.Instance.Err(
+			"listen on [GT%d] [fail], invalid ip/port config.",
+			ss.gtIndex,
+		)
+		return
+	}
+
+	ss.gtListener = ss.netComponent.Listen(
+		listenattr.Ip,
+		uint16(listenattr.Port),
+	)
+	if ss.gtListener == nil {
+		logsystem.Instance.Err(
+			"listen on [GT%d]: [%s:%d] [fail].",
+			ss.gtIndex,
+			listenattr.Ip,
+			listenattr.Port,
+		)
+		return
+	}
+
+	logsystem.Instance.Inf(
+		"listen on [GT%d]: [%s:%d] [ok].",
+		ss.gtIndex,
+		listenattr.Ip,
+		listenattr.Port,
+	)
 }
 
 func (ss *NetSystem) Do() bool {

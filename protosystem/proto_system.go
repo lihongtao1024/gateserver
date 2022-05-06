@@ -28,7 +28,7 @@ type ProtoSystem struct {
 var Instance *ProtoSystem
 var thisOnce sync.Once
 
-func NewProtoSystemInstance(index int, dispatcher ...ProtoDispatcher) *ProtoSystem {
+func NewInstance(index int, dispatcher ...ProtoDispatcher) *ProtoSystem {
 	thisOnce.Do(func() {
 		Instance = &ProtoSystem{
 			svrIndex:        index,
@@ -137,7 +137,7 @@ func (protos *ProtoSystem) VerifyClientHandShakeReq(data []byte) error {
 	return nil
 }
 
-func (protos *ProtoSystem) BuildRawProto(proto protocols.Writer) (result bool, data []byte) {
+func (protos *ProtoSystem) BuildClientProto(proto protocols.Writer) (result bool, data []byte) {
 	bs := protos.protoBuf[unsafe.Sizeof(uint32(0)):]
 	br := bytes.NewBuffer(bs)
 	br.Reset()

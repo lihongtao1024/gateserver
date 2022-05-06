@@ -147,8 +147,7 @@ func (svr *Server) Send(data []byte) bool {
 }
 
 func (svr *Server) Disconnect() {
-	if !svr.svrState.IsState(ServerConnected) &&
-		!svr.svrState.IsState(ServerWorking) {
+	if svr.svrConn == nil {
 		return
 	}
 
