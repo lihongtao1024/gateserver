@@ -3,7 +3,9 @@ package clients
 import (
 	"encoding/binary"
 	"fmt"
+	"gateserver/guidsystem"
 	"gateserver/internal/errors"
+	"gateserver/internal/guids"
 	"gateserver/internal/machines"
 	"gateserver/internal/networks"
 	"gateserver/internal/protocols"
@@ -34,7 +36,8 @@ type Client struct {
 	cliZid         uint32
 	cliAid         uint32
 	cliIp          uint32
-	cliSUid        uint64
+	cliGuid        guids.Guid
+	cliSuid        guids.Guid
 	cliUname       string
 	cliHardware    string
 	cliLongitude   string
@@ -51,6 +54,8 @@ func NewClient(conn networks.Connection) *Client {
 	client.cliState = machines.NewMachine(client)
 	client.cliState.SwitchState(&ClientIdleState{})
 	client.cliRandKey = make([]byte, unsafe.Sizeof(uint64(0)))
+	client.cliGuid = guids.InvalidGuid
+	client.cliSuid = guidsystem.Instance.CreateGuid(guids.GuidGlobal)
 	binary.LittleEndian.PutUint64(client.cliRandKey, rand.Uint64())
 
 	return client
@@ -136,8 +141,16 @@ func (client *Client) GetIp() uint32 {
 	return client.cliIp
 }
 
-func (client *Client) GetSUid() uint64 {
-	return client.cliSUid
+func (client *Client) GetSuid() uint64 {
+	return client.cliSuid
+}
+
+func (client *Client) SetGuid(guid uint64) {
+	client.cliGuid = guid
+}
+
+func (client *Client) GetGuid() uint64 {
+	return client.cliGuid
 }
 
 func (client *Client) SetLongitude(longitude string) {
@@ -256,12 +269,15 @@ func (client *Client) SendRandKey() bool {
 	return client.Send(data)
 }
 
-func (client *Client) SendLoginAck(err errors.SysError) bool {
+func (client *Client) SendLoginAck(err errors.SysError, rid ...guids.Guid) bool {
 	proto := &protocols.LoginAck{}
 	proto.Uid = client.cliUid
-	proto.Guid = 0
-	proto.Suid = 0
-	proto.Rid = 0
+	proto.Guid = client.cliGuid
+	proto.Suid = client.cliSuid
+
+	if rid != nil {
+		proto.Rid = rid[0]
+	}
 
 	code := err.Code()
 	if code != errors.ErrorOk {

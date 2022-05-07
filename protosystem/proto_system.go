@@ -15,7 +15,7 @@ import (
 
 type ProtoDispatcher interface {
 	GetMid() uint16
-	Dispatch(data []byte) bool
+	DispatchProto(data []byte) bool
 }
 
 type ProtoSystem struct {
@@ -54,7 +54,7 @@ func (protos *ProtoSystem) ReadProto(data []byte) (result bool) {
 	for _, dispatcher := range protos.protoDispatcher {
 		if dispatcher.GetMid() == mid {
 			found = true
-			result = dispatcher.Dispatch(data)
+			result = dispatcher.DispatchProto(data)
 		}
 	}
 

@@ -3,7 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"gateserver/applications"
+	"gateserver/application"
+	"gateserver/internal/configs"
 	"math/rand"
 	"os"
 	"runtime"
@@ -25,8 +26,12 @@ func main() {
 		return
 	}
 
-	app := applications.NewApplicationInstance()
-	app.Start(index, os.Args[2])
+	app := application.NewApplication()
+	if app == nil {
+		return
+	}
+
+	app.Start(configs.ServerIdGt, index, os.Args[2])
 
 	exitchan := make(chan struct{})
 	go func(ch chan<- struct{}) {
