@@ -11,6 +11,7 @@ import (
 	"gateserver/netsystem/servers"
 	"gateserver/netsystem/sessions"
 	"gateserver/timersystem"
+	"gateserver/verifysystem"
 	"sync"
 	"unsafe"
 )
@@ -105,6 +106,10 @@ func NewInstance(index int) *NetSystem {
 	return Instance
 }
 
+func (ss *NetSystem) deleteClient(client *clients.Client, conn networks.Connection) {
+	delete(ss.gtClients, conn)
+}
+
 func (ss *NetSystem) OnTimer() {
 	allworking := true
 
@@ -169,18 +174,18 @@ func (ss *NetSystem) OnConnected(listener networks.Listener, conn networks.Conne
 }
 
 func (ss *NetSystem) OnFatal(err error, conn networks.Connection) {
-	server, ok := conn.GetData().(sessions.Session)
+	session, ok := conn.GetData().(sessions.Session)
 	if !ok {
 		logsystem.Instance.Err("on fatal, system error:1.")
 		conn.Disconnect()
 		return
 	}
 
-	server.OnFatal(err)
+	session.OnFatal(err)
 }
 
 func (ss *NetSystem) OnClosed(conn networks.Connection) {
-	server, ok := conn.GetData().(sessions.Session)
+	session, ok := conn.GetData().(sessions.Session)
 	if !ok {
 		logsystem.Instance.Err("on closed, system error:1.")
 		conn.Disconnect()
@@ -188,17 +193,23 @@ func (ss *NetSystem) OnClosed(conn networks.Connection) {
 	}
 
 	conn.SetData(nil)
-	server.OnClosed()
+
+	if client, ok := session.(*clients.Client); ok {
+		ss.deleteClient(client, conn)
+		verifysystem.Instance.CancleRequest(client)
+	}
+
+	session.OnClosed()
 }
 
 func (ss *NetSystem) OnReceived(data []byte, conn networks.Connection) {
-	server, ok := conn.GetData().(sessions.Session)
+	session, ok := conn.GetData().(sessions.Session)
 	if !ok {
 		logsystem.Instance.Err("on recv, system error:1.")
 		conn.Disconnect()
 		return
 	}
-	server.OnReceived(data[unsafe.Sizeof(uint32(0)):])
+	session.OnReceived(data[unsafe.Sizeof(uint32(0)):])
 }
 
 func (ss *NetSystem) OnListen() {

@@ -10,7 +10,7 @@ import (
 	"gateserver/logsystem"
 	"gateserver/netsystem"
 	"gateserver/protosystem"
-	"gateserver/protosystem/messages"
+	"gateserver/protosystem/protocols"
 	"gateserver/timersystem"
 	"gateserver/verifysystem"
 	"os"
@@ -62,7 +62,7 @@ func (app *Application) OnInit() bool {
 
 	if protosystem.NewInstance(
 		app.GetIndex(),
-		messages.NewGT2WSProto(),
+		protocols.NewGT2WSProto(),
 	) == nil {
 		return false
 	}

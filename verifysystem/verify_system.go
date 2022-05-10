@@ -2,6 +2,7 @@ package verifysystem
 
 import (
 	"gateserver/configsystem"
+	"gateserver/internal/errors"
 	"gateserver/internal/protocols"
 	"gateserver/logsystem"
 	"gateserver/netsystem/clients"
@@ -10,12 +11,13 @@ import (
 
 type VerifyComponent interface {
 	PostRequest(client *clients.Client)
-	ReceiveResponse(client *clients.Client, err error)
+	ReceiveResponse(client *clients.Client, errcode errors.ErrorCode)
 	Close()
 }
 
 type VerifySystem struct {
 	verifyComponent VerifyComponent
+	verifyClients   map[string]*clients.Client
 }
 
 var Instance *VerifySystem
@@ -54,8 +56,12 @@ func newRealImpl() VerifyComponent {
 	return &realImpl{}
 }
 
-func (verify *VerifySystem) PostRequest(client *clients.Client, o interface{}) {
-	proto := o.(*protocols.LoginReq)
+func (verify *VerifySystem) PostRequest(client *clients.Client, proto *protocols.LoginReq) {
+	if verify.HasRequest(client) {
+		client.SendLoginAck(errors.NewError(errors.ErrorLoginPend))
+		client.Disconnect()
+		return
+	}
 
 	client.SetSid(proto.Sid)
 	client.SetUName(proto.Username)
@@ -69,13 +75,24 @@ func (verify *VerifySystem) PostRequest(client *clients.Client, o interface{}) {
 	verify.verifyComponent.PostRequest(client)
 }
 
-func (verify *VerifySystem) ReceiveResponse(client *clients.Client, err error) {
-	verify.verifyComponent.ReceiveResponse(client, err)
-	if err == nil {
+func (verify *VerifySystem) ReceiveResponse(client *clients.Client, errcode errors.ErrorCode) {
+	verify.verifyComponent.ReceiveResponse(client, errcode)
+	client.SendLoginAck(errors.NewError(errcode))
+
+	if errcode == errors.ErrorOk {
 		client.SwitchState(&clients.ClientRequestingState{})
 	} else {
 		client.Disconnect()
 	}
+}
+
+func (verify *VerifySystem) HasRequest(client *clients.Client) (result bool) {
+	_, result = verify.verifyClients[client.GetUName()]
+	return
+}
+
+func (verify *VerifySystem) CancleRequest(client *clients.Client) {
+	delete(verify.verifyClients, client.GetUName())
 }
 
 func (verify *VerifySystem) Close() {

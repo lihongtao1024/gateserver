@@ -1,6 +1,8 @@
 ///>本代码由测试工具自动生成,请勿手动修改
 package errors
 
+type ErrorCode int
+
 const (
 	ErrorOk                 = iota ///>成功
 	ErrorUnknown                   ///>系统错误
@@ -719,7 +721,7 @@ type sysError struct {
 	errDesc string
 }
 
-func NewError(err int) SysError {
+func NewError(err ErrorCode) SysError {
 	return &sysError{
 		errCode: int32(err),
 		errDesc: errorArray[err],

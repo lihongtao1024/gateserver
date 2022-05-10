@@ -80,11 +80,11 @@ func (impl *virtualImpl) PostRequest(client *clients.Client) {
 	}
 
 	client.SetUid(uid)
-	Instance.ReceiveResponse(client, nil)
+	Instance.ReceiveResponse(client, errors.ErrorOk)
 }
 
-func (impl *virtualImpl) ReceiveResponse(client *clients.Client, err error) {
-	client.SendLoginAck(errors.NewError(errors.ErrorOk))
+func (impl *virtualImpl) ReceiveResponse(client *clients.Client, err errors.ErrorCode) {
+
 }
 
 func (impl *virtualImpl) Close() {

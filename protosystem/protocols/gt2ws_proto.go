@@ -1,4 +1,4 @@
-package messages
+package protocols
 
 import (
 	"gateserver/internal/protocols"
