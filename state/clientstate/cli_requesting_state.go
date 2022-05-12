@@ -23,6 +23,8 @@ func (state *ClientRequestingState) OnEnter(o interface{}) {
 		client.GetLogicName(),
 	)
 
+	singleton.OnlineInstance.AddRequest(client)
+
 	client.SendLoginReq()
 	state.tmrTimeout = singleton.TimerInstance.AddTimer(
 		state,

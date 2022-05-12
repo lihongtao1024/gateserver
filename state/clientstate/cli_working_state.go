@@ -23,6 +23,7 @@ func (state *ClientWorkingState) OnEnter(o interface{}) {
 		client.GetLogicName(),
 	)
 
+	client.SendRandKey()
 	state.tmrTimeout = singleton.TimerInstance.AddTimer(
 		state,
 		WorkingTimeout,
@@ -43,6 +44,18 @@ func (state *ClientWorkingState) OnLeave(o interface{}) {
 
 func (state *ClientWorkingState) OnReceived(o interface{}, data []byte) {
 	client := o.(component.Client)
+
+	result, mid, pid := singleton.ProtoInstance.IsClientWatch(data)
+	if !result {
+		singleton.LogInstance.Dbg(
+			"[%s] received unexcepted protocol:[mid=%d, pid=%d].",
+			client.GetLogicName(),
+			mid,
+			pid,
+		)
+		return
+	}
+
 	singleton.ProtoInstance.SetDecodeSession(client)
 	singleton.ProtoInstance.DispatchProto(data)
 	singleton.ProtoInstance.SetDecodeSession(nil)

@@ -211,6 +211,7 @@ func (network *networkImpl) OnClosed(conn pkg.TcpConnection) {
 	if client, ok := session.(component.Client); ok {
 		network.deleteClient(client, conn)
 		singleton.VerifyInstance.CancleRequest(client)
+		singleton.OnlineInstance.DeleteRequest(client)
 		singleton.OnlineInstance.DeleteOnline(client)
 	}
 

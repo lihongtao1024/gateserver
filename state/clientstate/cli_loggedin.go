@@ -18,6 +18,10 @@ func (state *ClientLoggedInState) OnEnter(o interface{}) {
 		"[%s] enter ClientLoggedInState.",
 		client.GetLogicName(),
 	)
+
+	singleton.VerifyInstance.CancleRequest(client)
+	singleton.OnlineInstance.DeleteRequest(client)
+	singleton.OnlineInstance.AddOnline(client)
 }
 
 func (state *ClientLoggedInState) OnLeave(o interface{}) {
@@ -29,5 +33,17 @@ func (state *ClientLoggedInState) OnLeave(o interface{}) {
 }
 
 func (state *ClientLoggedInState) OnReceived(o interface{}, data []byte) {
+	client := o.(component.Client)
+
+	result, mid, pid := singleton.ProtoInstance.IsClientWatch(data)
+	if result {
+		singleton.LogInstance.Dbg(
+			"[%s] received unexpected protocol:[mid=%d, pid=%d].",
+			client.GetLogicName(),
+			mid,
+			pid,
+		)
+		return
+	}
 
 }

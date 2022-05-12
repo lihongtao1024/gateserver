@@ -5,6 +5,7 @@ import (
 	"gateserver/pkg"
 	"gateserver/pkg/protocols"
 	"gateserver/singleton"
+	"gateserver/state/clientstate"
 )
 
 type gt2wsProto struct {
@@ -41,4 +42,16 @@ func (protos *gt2wsProto) OnLoginReq(proto *protocols.LoginReq) {
 	}
 
 	singleton.VerifyInstance.PostRequest(client, proto)
+}
+
+func (protos *gt2wsProto) OnLoginAck(proto *protocols.LoginAck) {
+	client := singleton.ProtoInstance.GetDecodeSession().(component.Client)
+	client.SendClientProto(proto)
+
+	if proto.Errcode != int32(pkg.ErrorOk) {
+		client.(component.Session).Disconnect()
+		return
+	}
+
+	client.(component.Session).SwitchState(&clientstate.ClientLoggedInState{})
 }

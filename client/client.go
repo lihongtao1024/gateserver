@@ -243,6 +243,13 @@ func (client *clientImpl) SendClientHandShakeRsp() bool {
 	return client.Send(singleton.ProtoInstance.BuildClientHandShakeRsp())
 }
 
+func (client *clientImpl) SendRandKey() bool {
+	proto := &protocols.RandKeyNtf{}
+	proto.Code_content = client.cliRandKey
+
+	return client.SendClientProto(proto)
+}
+
 func (client *clientImpl) SendLoginReq() bool {
 	ws := singleton.NetInstance.GetWSServer()
 	if ws == nil {
@@ -288,7 +295,7 @@ func (client *clientImpl) SendLoginAck(errcode pkg.ErrorCode, rid ...pkg.Guid) b
 		proto.Errmsg = err.Error()
 	}
 
-	return client.sendClientProto(proto)
+	return client.SendClientProto(proto)
 }
 
 func (client *clientImpl) SendKickNtf(errcode pkg.ErrorCode) bool {
@@ -299,10 +306,10 @@ func (client *clientImpl) SendKickNtf(errcode pkg.ErrorCode) bool {
 		proto.Errmsg = err.Error()
 	}
 
-	return client.sendClientProto(proto)
+	return client.SendClientProto(proto)
 }
 
-func (client *clientImpl) sendClientProto(proto pkg.WriterProto) bool {
+func (client *clientImpl) SendClientProto(proto pkg.WriterProto) bool {
 	result, data := singleton.ProtoInstance.BuildClientProto(proto)
 	if !result {
 		return false

@@ -8,7 +8,7 @@ type ClientType int
 type CientState int
 
 const (
-	ClientTypeMT1 = ClientType(iota)
+	ClientTypeMT1 = ClientType(iota + 100)
 	ClientTypeMT2
 )
 
@@ -60,7 +60,9 @@ type Client interface {
 	GetRandKey() []byte
 	VerifyClientHandShakeReq(data []byte) error
 	SendClientHandShakeRsp() bool
+	SendRandKey() bool
 	SendLoginReq() bool
 	SendLoginAck(errcode pkg.ErrorCode, rid ...pkg.Guid) bool
 	SendKickNtf(errcode pkg.ErrorCode) bool
+	SendClientProto(pkg.WriterProto) bool
 }
