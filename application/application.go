@@ -2,130 +2,169 @@ package application
 
 import (
 	"fmt"
-	"gateserver/appsystem"
-	"gateserver/configsystem"
-	"gateserver/guidsystem"
-	"gateserver/internal/applications"
-	"gateserver/internal/guids"
-	"gateserver/logsystem"
-	"gateserver/netsystem"
-	"gateserver/protosystem"
-	"gateserver/protosystem/protocols"
-	"gateserver/timersystem"
-	"gateserver/verifysystem"
+	"gateserver/network"
+	"gateserver/online"
+	"gateserver/pkg"
+	"gateserver/pkg/applications"
+	"gateserver/pkg/configs"
+	"gateserver/pkg/guids"
+	"gateserver/pkg/loggers"
+	"gateserver/pkg/timers"
+	"gateserver/protocol"
+	"gateserver/singleton"
+	"gateserver/verify"
 	"os"
 	"time"
 )
 
-const (
-	appHeartBeatTimeout = time.Millisecond
-)
+const appConfig = "./svrinfo.xml"
+const appHeartBeatTimeout = time.Millisecond
 
-type Application struct {
-	applications.Component
+type applicationImpl struct {
+	pkg.Application
 }
 
-func NewApplication() *Application {
-	app := &Application{}
-	app.Component = applications.NewApplication(app)
+func NewApplication() *applicationImpl {
+	app := &applicationImpl{}
+	app.Application = applications.NewApplication(app)
 	return app
 }
 
-func (app *Application) OnInit() bool {
+func (app *applicationImpl) buildLogParam() (flag pkg.LogType, outname, outdir string) {
+	attr := singleton.CfgInstance.GetLogAttr()
+	flag = pkg.LogTypeSys
+	if attr.Dbg {
+		flag |= pkg.LogTypeDbg
+	}
+
+	if attr.Inf {
+		flag |= pkg.LogTypeInf
+	}
+
+	if attr.Wrn {
+		flag |= pkg.LogTypeWrn
+	}
+
+	if attr.Err {
+		flag |= pkg.LogTypeErr
+	}
+
+	outname = app.GetLogicName()
+	outdir = attr.Output
+	return
+}
+
+func (app *applicationImpl) OnInit() bool {
 	fmt.Fprintf(os.Stdout, "init %s [wait].\n", app.GetLogicName())
-	appsystem.NewInstance(app)
 
-	if configsystem.NewInstance() == nil {
+	singleton.NewApplication(app)
+	fmt.Fprintf(os.Stdout, "init singleton<Application> [ok].\n")
+
+	if singleton.NewConfig(configs.NewConfig(), appConfig) == nil {
+		fmt.Fprintf(os.Stderr, "init singleton<Config> [fail].\n")
 		return false
 	}
+	fmt.Fprintf(os.Stdout, "init singleton<Config> [ok].\n")
 
-	if logsystem.NewInstance(app.GetLogicName()) == nil {
+	if singleton.NewLogger(loggers.NewLogger(app.buildLogParam())) == nil {
+		fmt.Fprintf(os.Stderr, "init singleton<Logger> [fail].\n")
 		return false
 	}
-	logsystem.Instance.Sys("init log system [ok].")
+	singleton.LogInstance.Sys("init singleton<Logger> [ok].")
 
-	if timersystem.NewInstance() == nil {
+	if singleton.NewTimer(timers.NewComponent()) == nil {
+		singleton.LogInstance.Err("init singleton<Timer> [fail].")
 		return false
 	}
-	logsystem.Instance.Sys("init timer system [ok].")
+	singleton.LogInstance.Sys("init singleton<Timer> [ok].")
 
-	if netsystem.NewInstance(app.GetIndex()) == nil {
+	if singleton.NewGuidBuilder(guids.NewGuidBuilder(app.GetIndex())) == nil {
+		singleton.LogInstance.Err("init singleton<Guid> [fail].")
 		return false
 	}
-	logsystem.Instance.Sys("init net system [ok].")
+	singleton.LogInstance.Sys("init singleton<Guid> [ok].")
 
-	if guidsystem.NewInstance(app.GetIndex()) == nil {
+	if singleton.NewNetwork(network.NewNetwork(app.GetIndex())) == nil {
+		singleton.LogInstance.Err("init singleton<Network> [fail].")
 		return false
 	}
-	app.Component.SetRid(guidsystem.Instance.CreateGuid(guids.GuidGlobal))
-	logsystem.Instance.Sys("init guid system [ok].")
+	singleton.LogInstance.Sys("init singleton<Network> [ok].")
 
-	if protosystem.NewInstance(
-		app.GetIndex(),
-		protocols.NewGT2WSProto(),
-	) == nil {
+	if singleton.NewProtocol(protocol.NewProtocol()) == nil {
+		singleton.LogInstance.Err("init singleton<Protocol> [fail].")
 		return false
 	}
-	logsystem.Instance.Sys("init proto system [ok].")
+	singleton.LogInstance.Sys("init singleton<Protocol> [ok].")
 
-	if verifysystem.NewInstance() == nil {
+	if singleton.NewVerify(verify.NewVerify()) == nil {
+		singleton.LogInstance.Err("init singleton<Verify> [fail].")
 		return false
 	}
-	logsystem.Instance.Sys("init verify system [ok].")
+	singleton.LogInstance.Sys("init singleton<Verify> [ok].")
 
-	logsystem.Instance.Sys("init %s [ok].", app.GetLogicName())
+	if singleton.NewOnline(online.NewOnline()) == nil {
+		singleton.LogInstance.Err("init singleton<Online> [fail].")
+		return false
+	}
+	singleton.LogInstance.Sys("init singleton<Online> [ok].")
+
+	singleton.LogInstance.Sys("init %s [ok].", app.GetLogicName())
 	return true
 }
 
-func (app *Application) OnUninit() {
-	if logsystem.Instance != nil {
-		logsystem.Instance.Sys("uninit %s [wait].", app.GetLogicName())
-	} else {
-		fmt.Fprintf(os.Stdout, "uninit %s [wait].\n", app.GetLogicName())
+func (app *applicationImpl) OnUninit() {
+	if singleton.OnlineInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Online> [ok].")
+		singleton.OnlineInstance.Close()
 	}
 
-	if verifysystem.Instance != nil {
-		logsystem.Instance.Sys("uninit verify system [ok].")
-		verifysystem.Instance.Close()
+	if singleton.VerifyInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Verify> [ok].")
+		singleton.VerifyInstance.Close()
 	}
 
-	if netsystem.Instance != nil {
-		logsystem.Instance.Sys("uninit net system [ok].")
-		netsystem.Instance.Close()
+	if singleton.ProtoInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Protocol> [ok].")
+		singleton.ProtoInstance.Close()
 	}
 
-	if protosystem.Instance != nil {
-		logsystem.Instance.Sys("uninit proto system [ok].")
-		protosystem.Instance.Close()
+	if singleton.NetInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Network> [ok].")
+		singleton.NetInstance.Close()
 	}
 
-	if timersystem.Instance != nil {
-		logsystem.Instance.Sys("uninit timer system [ok].")
-		timersystem.Instance.Close()
+	if singleton.GuidInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Guid> [ok].")
+		singleton.GuidInstance.Close()
 	}
 
-	if guidsystem.Instance != nil {
-		logsystem.Instance.Sys("uninit guid system [ok].")
-		guidsystem.Instance.Close()
+	if singleton.TimerInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Timer> [ok].")
+		singleton.TimerInstance.Close()
 	}
 
-	if logsystem.Instance != nil {
-		logsystem.Instance.Sys("uninit log system [ok].")
-		logsystem.Instance.Close()
+	if singleton.LogInstance != nil {
+		singleton.LogInstance.Sys("uninit singleton<Config> [ok].")
+		singleton.LogInstance.Close()
+	}
+
+	if singleton.CfgInstance != nil {
+		fmt.Fprintf(os.Stdout, "uninit singleton<Config> [ok].\n")
+		singleton.CfgInstance.Close()
 	}
 
 	fmt.Fprintf(os.Stdout, "uninit %s [ok].\n", app.GetLogicName())
 }
 
-func (app *Application) OnWorking() {
+func (app *applicationImpl) OnWorking() {
 	busy := false
-	timersystem.Instance.Do()
-	busy = netsystem.Instance.Do() || busy
+	singleton.TimerInstance.Do()
+	busy = singleton.NetInstance.Do() || busy
 	if !busy {
 		time.Sleep(appHeartBeatTimeout)
 	}
 }
 
-func (app *Application) OnClosing() bool {
+func (app *applicationImpl) OnClosing() bool {
 	return true
 }
