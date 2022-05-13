@@ -28,31 +28,34 @@ func (state *ServerWorkingState) OnLeave(o interface{}) {
 	)
 }
 
-func (state *ServerWorkingState) OnReceived(o interface{}, data []byte) {
+func (state *ServerWorkingState) OnReceived(o interface{},
+	data []byte) {
 	server := o.(component.Server)
-	result, toclient, data, clients := singleton.ProtoInstance.ParseServerProto(data)
+	result, isc, proto, clients := singleton.ProtoInstance.ParseServerProto(
+		data,
+	)
 	if !result {
 		return
 	}
 
-	if !toclient {
+	if !isc {
 		singleton.ProtoInstance.SetDecodeSession(server)
-		singleton.ProtoInstance.DispatchProto(data)
+		singleton.ProtoInstance.DispatchProto(proto)
 		singleton.ProtoInstance.SetDecodeSession(nil)
 		return
 	}
 
-	result, _, _ = singleton.ProtoInstance.IsServerWatch(data)
+	result, _, _ = singleton.ProtoInstance.IsServerWatch(proto)
 	if !result {
 		for _, client := range clients {
-			client.(component.Session).Send(data)
+			client.SendClientData(proto)
 		}
 		return
 	}
 
 	for _, client := range clients {
 		singleton.ProtoInstance.SetDecodeSession(client)
-		singleton.ProtoInstance.DispatchProto(data)
+		singleton.ProtoInstance.DispatchProto(proto)
 		singleton.ProtoInstance.SetDecodeSession(nil)
 	}
 }

@@ -225,7 +225,7 @@ func (network *networkImpl) OnReceived(data []byte, conn pkg.TcpConnection) {
 		conn.Disconnect()
 		return
 	}
-	session.OnReceived(data[unsafe.Sizeof(uint32(0)):])
+	session.OnReceived(data[netPackageHeader:])
 }
 
 func (network *networkImpl) OnListen() {
@@ -279,7 +279,8 @@ func (network *networkImpl) GetWSServer() component.Server {
 }
 
 func (network *networkImpl) GetGSServer(index int) component.Server {
-	if index >= len(network.gsServer) {
+	index--
+	if index < 0 || index >= len(network.gsServer) {
 		return nil
 	}
 

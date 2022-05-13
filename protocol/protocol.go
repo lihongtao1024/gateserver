@@ -18,23 +18,24 @@ type protoDispatcher interface {
 }
 
 type protocolImpl struct {
-	protoDispatcher []protoDispatcher
-	decodeSession   interface{}
-	protoBuf        [4194304]byte
-	watchC2SProto   map[uint32]struct{}
-	watchS2CProto   map[uint32]struct{}
+	wsDispatcher  protoDispatcher
+	ctDispatcher  protoDispatcher
+	gsDispatcher  protoDispatcher
+	decodeSession interface{}
+	protoBuf      [4194304]byte
+	watchC2SProto map[uint32]struct{}
+	watchS2CProto map[uint32]struct{}
 }
 
 func NewProtocol() component.Protocol {
 	protos := &protocolImpl{
-		protoDispatcher: make([]protoDispatcher, 0),
-		watchC2SProto:   make(map[uint32]struct{}),
-		watchS2CProto:   make(map[uint32]struct{}),
+		wsDispatcher:  newGT2WSProto(),
+		ctDispatcher:  newGT2CTProto(),
+		gsDispatcher:  newGT2GSProto(),
+		watchC2SProto: make(map[uint32]struct{}),
+		watchS2CProto: make(map[uint32]struct{}),
 	}
-	protos.protoDispatcher = append(
-		protos.protoDispatcher,
-		newGT2WSProto(),
-	)
+
 	protos.addWatch()
 	return protos
 }
@@ -72,7 +73,7 @@ func (protos *protocolImpl) addWatch() {
 
 func (proto *protocolImpl) parseWatch(data []byte) (
 	mid uint16, pid uint16, result bool) {
-	if len(data) < int(unsafe.Sizeof(uint32(0))) {
+	if len(data) < int(unsafe.Sizeof(uint16(0))*2) {
 		return
 	}
 
@@ -82,8 +83,20 @@ func (proto *protocolImpl) parseWatch(data []byte) (
 	return
 }
 
-func (protos *protocolImpl) IsServerWatch(data []byte) (result bool, mid uint16,
-	pid uint16) {
+func (protos *protocolImpl) IsWSProtocol(mid uint16) bool {
+	return mid == protos.wsDispatcher.GetMid()
+}
+
+func (protos *protocolImpl) IsCTProtocol(mid uint16) bool {
+	return mid == protos.ctDispatcher.GetMid()
+}
+
+func (protos *protocolImpl) IsGSProtocol(mid uint16) bool {
+	return mid == protos.gsDispatcher.GetMid()
+}
+
+func (protos *protocolImpl) IsServerWatch(data []byte) (result bool,
+	mid uint16, pid uint16) {
 	mid, pid, result = protos.parseWatch(data)
 	if !result {
 		return
@@ -93,8 +106,8 @@ func (protos *protocolImpl) IsServerWatch(data []byte) (result bool, mid uint16,
 	return
 }
 
-func (protos *protocolImpl) IsClientWatch(data []byte) (result bool, mid uint16,
-	pid uint16) {
+func (protos *protocolImpl) IsClientWatch(data []byte) (result bool,
+	mid uint16, pid uint16) {
 	mid, pid, result = protos.parseWatch(data)
 	if !result {
 		return
@@ -113,31 +126,38 @@ func (protos *protocolImpl) GetDecodeSession() interface{} {
 }
 
 func (protos *protocolImpl) DispatchProto(data []byte) (result bool) {
-	found := false
 	mid := binary.LittleEndian.Uint16(data)
 
-	for _, dispatcher := range protos.protoDispatcher {
-		if dispatcher.GetMid() == mid {
-			found = true
-			result = dispatcher.DispatchProto(data)
+	switch mid {
+	case protos.wsDispatcher.GetMid():
+		{
+			result = protos.wsDispatcher.DispatchProto(data)
 		}
-	}
-
-	if !found {
-		result = false
-		pid := binary.LittleEndian.Uint16(data[unsafe.Sizeof(uint16(0)):])
-		singleton.LogInstance.Dbg(
-			"handle illegal proto: [mid:%d, pid:%d].",
-			mid,
-			pid,
-		)
+	case protos.ctDispatcher.GetMid():
+		{
+			result = protos.ctDispatcher.DispatchProto(data)
+		}
+	case protos.gsDispatcher.GetMid():
+		{
+			result = protos.gsDispatcher.DispatchProto(data)
+		}
+	default:
+		{
+			result = false
+			pid := binary.LittleEndian.Uint16(data[unsafe.Sizeof(uint16(0)):])
+			singleton.LogInstance.Dbg(
+				"handle illegal proto: [mid:%d, pid:%d].",
+				mid,
+				pid,
+			)
+		}
 	}
 
 	return
 }
 
 func (protos *protocolImpl) BuildServerHandShakeReq() []byte {
-	bs := protos.protoBuf[unsafe.Sizeof(uint32(0)):]
+	bs := protos.protoBuf[unsafe.Sizeof(int32(0)):]
 	hr := *(**protocols.ServerHandShakeReq)(unsafe.Pointer(&bs))
 	hr.Type = uint16(singleton.AppInstance.GetType())
 	hr.Index = uint16(singleton.AppInstance.GetIndex())
@@ -145,7 +165,7 @@ func (protos *protocolImpl) BuildServerHandShakeReq() []byte {
 	hr.Version = protocols.NetVersion
 	hr.Lenght = 0
 
-	l := uint32(unsafe.Sizeof(*hr)) + uint32(unsafe.Sizeof(uint32(0)))
+	l := uint32(unsafe.Sizeof(*hr)) + uint32(unsafe.Sizeof(int32(0)))
 	binary.LittleEndian.PutUint32(protos.protoBuf[:], l)
 	return protos.protoBuf[:l]
 }
@@ -187,13 +207,13 @@ func (proto *protocolImpl) VerifyServerHandShakeRsp(index uint16,
 }
 
 func (protos *protocolImpl) BuildClientHandShakeRsp() []byte {
-	bs := protos.protoBuf[unsafe.Sizeof(uint32(0)):]
+	bs := protos.protoBuf[unsafe.Sizeof(int32(0)):]
 	hr := *(**protocols.ClientHandShakeRsp)(unsafe.Pointer(&bs))
 	hr.Return = 0
 	hr.Load = 0
 	hr.Delay = 10
 
-	l := uint32(unsafe.Sizeof(*hr)) + uint32(unsafe.Sizeof(uint32(0)))
+	l := uint32(unsafe.Sizeof(*hr)) + uint32(unsafe.Sizeof(int32(0)))
 	binary.LittleEndian.PutUint32(protos.protoBuf[:], l)
 	return protos.protoBuf[:l]
 }
@@ -228,7 +248,8 @@ func (protos *protocolImpl) VerifyClientHandShakeReq(data []byte) error {
 
 func (protos *protocolImpl) BuildClientProto(proto pkg.WriterProto) (
 	result bool, data []byte) {
-	bs := protos.protoBuf[unsafe.Sizeof(uint32(0)):]
+	bl := unsafe.Sizeof(int32(0))
+	bs := protos.protoBuf[bl:]
 	br := bytes.NewBuffer(bs)
 	br.Reset()
 
@@ -238,19 +259,20 @@ func (protos *protocolImpl) BuildClientProto(proto pkg.WriterProto) (
 		return
 	}
 
-	l := uint32(br.Len()) + uint32(unsafe.Sizeof(uint32(0)))
+	l := uint32(br.Len()) + uint32(bl)
 	binary.LittleEndian.PutUint32(protos.protoBuf[:], l)
 	return true, protos.protoBuf[:l]
 }
 
 func (protos *protocolImpl) BuildServerProto(client component.Client,
 	proto pkg.WriterProto) (result bool, data []byte) {
-	bl := unsafe.Sizeof(uint32(0))
+	bl := unsafe.Sizeof(int32(0))
 	bs := protos.protoBuf[bl:]
 	hr := *(**protocols.C2SProtoHeader)(unsafe.Pointer(&bs))
 	hl := unsafe.Sizeof(*hr)
 	hr.Sid = uint32(client.GetSid())
 	hr.Uid = client.GetUid()
+	hr.Aid = client.GetAid()
 
 	bs = protos.protoBuf[bl+hl:]
 	br := bytes.NewBuffer(bs)
@@ -267,8 +289,37 @@ func (protos *protocolImpl) BuildServerProto(client component.Client,
 	return true, protos.protoBuf[:l]
 }
 
-func (protos *protocolImpl) ParseServerProto(data []byte) (result bool,
-	client bool, proto []byte, clients []component.Client) {
+func (protos *protocolImpl) BuildClientData(data []byte) (
+	result bool, proto []byte) {
+	bl := unsafe.Sizeof(int32(0))
+	bs := protos.protoBuf[bl:]
+
+	copy(bs, data)
+	l := uint32(bl) + uint32(len(data))
+	binary.LittleEndian.PutUint32(protos.protoBuf[:], l)
+	return true, protos.protoBuf[:l]
+}
+
+func (protos *protocolImpl) BuildServerData(client component.Client,
+	data []byte) (result bool, proto []byte) {
+	bl := unsafe.Sizeof(int32(0))
+	bs := protos.protoBuf[bl:]
+	hr := *(**protocols.C2SProtoHeader)(unsafe.Pointer(&bs))
+	hl := unsafe.Sizeof(*hr)
+	hr.Sid = uint32(client.GetSid())
+	hr.Uid = client.GetUid()
+	hr.Aid = client.GetAid()
+
+	bs = protos.protoBuf[bl+hl:]
+	copy(bs, data)
+
+	l := uint32(len(data)) + uint32(bl) + uint32(hl)
+	binary.LittleEndian.PutUint32(protos.protoBuf[:], l)
+	return true, protos.protoBuf[:l]
+}
+
+func (protos *protocolImpl) ParseServerProto(data []byte) (
+	result bool, client bool, proto []byte, clients []component.Client) {
 	hr := *(**protocols.S2CProtoHeader)(unsafe.Pointer(&data))
 	hl := int(unsafe.Sizeof(*hr))
 	if len(data) < hl {

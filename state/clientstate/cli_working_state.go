@@ -42,13 +42,14 @@ func (state *ClientWorkingState) OnLeave(o interface{}) {
 	singleton.TimerInstance.DelTimer(state.tmrTimeout)
 }
 
-func (state *ClientWorkingState) OnReceived(o interface{}, data []byte) {
+func (state *ClientWorkingState) OnReceived(o interface{},
+	data []byte) {
 	client := o.(component.Client)
 
 	result, mid, pid := singleton.ProtoInstance.IsClientWatch(data)
 	if !result {
 		singleton.LogInstance.Dbg(
-			"[%s] received unexcepted protocol:[mid=%d, pid=%d].",
+			"[%s] received unexpected protocol:[mid=%d, pid=%d].",
 			client.GetLogicName(),
 			mid,
 			pid,

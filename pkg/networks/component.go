@@ -115,9 +115,9 @@ func (comp *tcpComponent) postConnected(listener *net.TCPListener, conn *tcpConn
 	comp.eventChan <- evt
 }
 
-func (comp *tcpComponent) postRecived(conn *tcpConnection, data []byte, len int) {
-	slice := make([]byte, len)
-	copy(slice, data[:len])
+func (comp *tcpComponent) postRecived(conn *tcpConnection, data []byte, l int) {
+	slice := make([]byte, l)
+	copy(slice, data)
 
 	evt := &comMessageEvent{
 		data: slice,

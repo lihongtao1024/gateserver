@@ -31,7 +31,10 @@ func NewVerify() *verifyComponent {
 		return nil
 	}
 
-	return &verifyComponent{verifyImpl: comp}
+	return &verifyComponent{
+		verifyImpl:    comp,
+		verifyClients: make(map[string]component.Client),
+	}
 }
 
 func newVirtualImpl() verifyImpl {

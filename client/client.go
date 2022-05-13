@@ -26,6 +26,7 @@ type clientImpl struct {
 	cliZid         uint32
 	cliAid         uint32
 	cliIp          uint32
+	cliRealState   uint32
 	cliGuid        pkg.Guid
 	cliSuid        pkg.Guid
 	cliUname       string
@@ -33,6 +34,8 @@ type clientImpl struct {
 	cliLongitude   string
 	cliLatitude    string
 	cliPlatform    string
+	cliRealToken   string
+	cliAuthToken   string
 	cliRandKey     []byte
 	cliPassword    []byte
 	pkg.TcpConnection
@@ -46,6 +49,7 @@ func NewClient(conn pkg.TcpConnection) component.Client {
 	client.cliRandKey = make([]byte, unsafe.Sizeof(uint64(0)))
 	client.cliGuid = pkg.InvalidGuid
 	client.cliSuid = singleton.GuidInstance.CreateGuid(pkg.GuidGlobal)
+	client.cliAid = ^uint32(0)
 	binary.LittleEndian.PutUint64(client.cliRandKey, rand.Uint64())
 
 	return client
@@ -131,6 +135,14 @@ func (client *clientImpl) GetIp() uint32 {
 	return client.cliIp
 }
 
+func (client *clientImpl) SetRealState(state uint32) {
+	client.cliRealState = state
+}
+
+func (client *clientImpl) GetRealState() uint32 {
+	return client.cliRealState
+}
+
 func (client *clientImpl) GetSuid() pkg.Guid {
 	return client.cliSuid
 }
@@ -182,6 +194,22 @@ func (client *clientImpl) SetPlatform(platform string) {
 
 func (client *clientImpl) GetPlatform() string {
 	return client.cliPlatform
+}
+
+func (client *clientImpl) SetRealToken(token string) {
+	client.cliRealToken = token
+}
+
+func (client *clientImpl) GetRealToken() string {
+	return client.cliRealToken
+}
+
+func (client *clientImpl) SetAuthToken(token string) {
+	client.cliAuthToken = token
+}
+
+func (client *clientImpl) GetAuthToken() string {
+	return client.cliAuthToken
 }
 
 func (client *clientImpl) GetLogicName() string {
@@ -279,7 +307,8 @@ func (client *clientImpl) SendLoginReq() bool {
 	return client.sendServerProto(ws, proto)
 }
 
-func (client *clientImpl) SendLoginAck(errcode pkg.ErrorCode, rid ...pkg.Guid) bool {
+func (client *clientImpl) SendLoginAck(errcode pkg.ErrorCode,
+	rid ...pkg.Guid) bool {
 	proto := &protocols.LoginAck{}
 	proto.Uid = client.cliUid
 	proto.Guid = uint64(client.cliGuid)
@@ -309,8 +338,26 @@ func (client *clientImpl) SendKickNtf(errcode pkg.ErrorCode) bool {
 	return client.SendClientProto(proto)
 }
 
+func (client *clientImpl) SendRealNtf() bool {
+	proto := &protocols.RealnameInfoNtf{}
+	proto.Realname_status = client.cliRealState
+	proto.Auth = client.cliAuthToken
+	proto.Realname_token = client.cliRealToken
+
+	return client.SendClientProto(proto)
+}
+
 func (client *clientImpl) SendClientProto(proto pkg.WriterProto) bool {
 	result, data := singleton.ProtoInstance.BuildClientProto(proto)
+	if !result {
+		return false
+	}
+
+	return client.Send(data)
+}
+
+func (client *clientImpl) SendClientData(data []byte) bool {
+	result, data := singleton.ProtoInstance.BuildClientData(data)
 	if !result {
 		return false
 	}
@@ -325,6 +372,32 @@ func (client *clientImpl) sendServerProto(server component.Server,
 	}
 
 	result, data := singleton.ProtoInstance.BuildServerProto(client, proto)
+	if !result {
+		return false
+	}
+
+	return server.(component.Session).Send(data)
+}
+
+func (client *clientImpl) SendServerData(typ1 pkg.ServerType,
+	data []byte) bool {
+	var server component.Server
+
+	switch typ1 {
+	case pkg.ServerIdWs:
+		server = singleton.NetInstance.GetWSServer()
+	case pkg.ServerIdCt:
+		server = singleton.NetInstance.GetCTServer()
+	case pkg.ServerIdGs:
+		server = singleton.NetInstance.GetGSServer(int(client.cliGSid))
+	default:
+	}
+
+	if server == nil {
+		return false
+	}
+
+	result, data := singleton.ProtoInstance.BuildServerData(client, data)
 	if !result {
 		return false
 	}

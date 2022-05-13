@@ -8,6 +8,11 @@ import (
 	"gateserver/state/clientstate"
 )
 
+const (
+	logoutGame = iota + 1
+	logoutWorld
+)
+
 type gt2wsProto struct {
 	*protocols.ClientWS
 }
@@ -46,6 +51,10 @@ func (protos *gt2wsProto) OnLoginReq(proto *protocols.LoginReq) {
 
 func (protos *gt2wsProto) OnLoginAck(proto *protocols.LoginAck) {
 	client := singleton.ProtoInstance.GetDecodeSession().(component.Client)
+	if client.GetSuid() != pkg.Guid(proto.Suid) {
+		return
+	}
+
 	client.SendClientProto(proto)
 
 	if proto.Errcode != int32(pkg.ErrorOk) {
@@ -53,5 +62,51 @@ func (protos *gt2wsProto) OnLoginAck(proto *protocols.LoginAck) {
 		return
 	}
 
+	client.SendRealNtf()
+	singleton.VerifyInstance.CancleRequest(client)
+	singleton.OnlineInstance.DeleteRequest(client)
+	singleton.OnlineInstance.AddOnline(client)
+
 	client.(component.Session).SwitchState(&clientstate.ClientLoggedInState{})
+}
+
+func (protos *gt2wsProto) OnLogoutAck(proto *protocols.LogoutAck) {
+	client := singleton.ProtoInstance.GetDecodeSession().(component.Client)
+	client.SendClientProto(proto)
+
+	if proto.Errcode != int32(pkg.ErrorOk) {
+		return
+	}
+
+	switch proto.Type {
+	case logoutGame:
+		client.SetGuid(pkg.InvalidGuid)
+		client.SetGSid(0)
+		client.SetAid(^uint32(0))
+		client.(component.Session).SwitchState(&clientstate.ClientLoggedInState{})
+	case logoutWorld:
+		client.(component.Session).Disconnect()
+	default:
+	}
+}
+
+func (protos *gt2wsProto) OnEnterGSAck(proto *protocols.EnterGSAck) {
+	client := singleton.ProtoInstance.GetDecodeSession().(component.Client)
+	client.SendClientProto(proto)
+
+	if proto.Errcode != int32(pkg.ErrorOk) {
+		return
+	}
+
+	client.SetGuid(pkg.Guid(proto.Guid))
+	client.SetGSid(uint8(proto.Gsindex))
+	client.SetAid(proto.Arrayid)
+
+	client.(component.Session).SwitchState(&clientstate.ClientPlayingState{})
+}
+
+func (protos *gt2wsProto) OnKickNtf(proto *protocols.KickNtf) {
+	client := singleton.ProtoInstance.GetDecodeSession().(component.Client)
+	client.SendClientProto(proto)
+	client.(component.Session).Disconnect()
 }

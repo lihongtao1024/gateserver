@@ -44,7 +44,8 @@ func (state *ClientRequestingState) OnLeave(o interface{}) {
 	singleton.TimerInstance.DelTimer(state.tmrTimeout)
 }
 
-func (state *ClientRequestingState) OnReceived(o interface{}, data []byte) {
+func (state *ClientRequestingState) OnReceived(o interface{},
+	data []byte) {
 
 }
 

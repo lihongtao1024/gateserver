@@ -41,7 +41,8 @@ func (state *ClientConnectedState) OnLeave(o interface{}) {
 	singleton.TimerInstance.DelTimer(state.tmrTimeout)
 }
 
-func (state *ClientConnectedState) OnReceived(o interface{}, data []byte) {
+func (state *ClientConnectedState) OnReceived(o interface{},
+	data []byte) {
 	client := o.(component.Client)
 	if err := client.VerifyClientHandShakeReq(data); err != nil {
 		singleton.LogInstance.Err(

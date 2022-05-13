@@ -41,7 +41,8 @@ func (state *ClientVerifyingState) OnLeave(o interface{}) {
 	singleton.TimerInstance.DelTimer(state.tmrTimeout)
 }
 
-func (state *ClientVerifyingState) OnReceived(o interface{}, data []byte) {
+func (state *ClientVerifyingState) OnReceived(o interface{},
+	data []byte) {
 
 }
 

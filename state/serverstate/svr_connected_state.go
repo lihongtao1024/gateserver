@@ -29,7 +29,8 @@ func (state *ServerConnectedState) OnLeave(o interface{}) {
 	)
 }
 
-func (state *ServerConnectedState) OnReceived(o interface{}, data []byte) {
+func (state *ServerConnectedState) OnReceived(o interface{},
+	data []byte) {
 	server := o.(component.Server)
 	if err := server.VerifyHandShakeRsp(data); err != nil {
 		singleton.LogInstance.Err(

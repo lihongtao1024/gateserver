@@ -61,8 +61,11 @@ type Client interface {
 	VerifyClientHandShakeReq(data []byte) error
 	SendClientHandShakeRsp() bool
 	SendRandKey() bool
+	SendRealNtf() bool
 	SendLoginReq() bool
 	SendLoginAck(errcode pkg.ErrorCode, rid ...pkg.Guid) bool
 	SendKickNtf(errcode pkg.ErrorCode) bool
 	SendClientProto(pkg.WriterProto) bool
+	SendClientData(data []byte) bool
+	SendServerData(typ1 pkg.ServerType, data []byte) bool
 }

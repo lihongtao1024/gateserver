@@ -28,6 +28,7 @@ func (state *ServerIdleState) OnLeave(o interface{}) {
 	)
 }
 
-func (state *ServerIdleState) OnReceived(o interface{}, data []byte) {
+func (state *ServerIdleState) OnReceived(o interface{},
+	data []byte) {
 
 }

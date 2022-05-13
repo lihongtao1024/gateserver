@@ -31,6 +31,7 @@ func (state *ServerConnectingState) OnLeave(o interface{}) {
 	)
 }
 
-func (state *ServerConnectingState) OnReceived(o interface{}, data []byte) {
+func (state *ServerConnectingState) OnReceived(o interface{},
+	data []byte) {
 
 }
